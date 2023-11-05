@@ -8,15 +8,19 @@ from example_interfaces.srv import AddTwoInts
 class AddTwoIntsClientAsync(Node):
     def __init__(self):
         super().__init__('add_two_ints_async_client')
-        self.cli = self.create_client(AddTwoInts, 'add_two_ints')
-        while not self.cli.wait_for_service(timeout_sec=1.0):
+        self.client_ = self.create_client(AddTwoInts, 'add_two_ints')
+        while not self.client_.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting...')
         self.req = AddTwoInts.Request()
+    
+    @property
+    def name(self):
+        return self.client_.srv_name
 
     def send_request(self, a, b):
         self.req.a = a
         self.req.b = b
-        self.future = self.cli.call_async(self.req)
+        self.future = self.client_.call_async(self.req)
         rclpy.spin_until_future_complete(self, self.future)
         return self.future.result()
 

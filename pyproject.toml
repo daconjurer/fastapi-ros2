@@ -16,10 +16,10 @@ pydantic = {extras = ["email"], version = "^2.4.2"}
 numpy = "^1.26.1"
 
 [tool.poetry.scripts]
-print = "fastapi_ros2.publisher_print:main"
-move = "fastapi_ros2.publisher_move:main"
-service = "fastapi_ros2.minimal_server:main"
-client = "fastapi_ros2.minimal_client:main"
+print_publisher = "fastapi_ros2.examples.print_publisher:main"
+add_server = "fastapi_ros2.examples.add_server:main"
+service = "fastapi_ros2.services.add_two_ints.server:main"
+client = "fastapi_ros2.services.add_two_ints.client:main"
 
 [tool.poetry.group.test.dependencies]
 nox = "^2023.4.22"
