@@ -5,12 +5,12 @@ from rclpy.node import Node
 from example_interfaces.srv import AddTwoInts
 
 
-class MinimalClientAsync(Node):
+class AddTwoIntsClientAsync(Node):
     def __init__(self):
-        super().__init__('minimal_client_async')
+        super().__init__('add_two_ints_async_client')
         self.cli = self.create_client(AddTwoInts, 'add_two_ints')
         while not self.cli.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('service not available, waiting again...')
+            self.get_logger().info('service not available, waiting...')
         self.req = AddTwoInts.Request()
 
     def send_request(self, a, b):
@@ -24,7 +24,7 @@ class MinimalClientAsync(Node):
 def main():
     rclpy.init()
 
-    minimal_client = MinimalClientAsync()
+    minimal_client = AddTwoIntsClientAsync()
     response = minimal_client.send_request(int(sys.argv[1]), int(sys.argv[2]))
     minimal_client.get_logger().info(
         f"Result of add_two_ints: for {int(sys.argv[1])} + {int(sys.argv[2])} = {response.sum}"

@@ -9,10 +9,11 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = ">=3.10, <3.11"
 fastapi = "^0.100.0"
 uvicorn = {extras = ["standard"], version = "^0.23.1"}
 pydantic = {extras = ["email"], version = "^2.4.2"}
+numpy = "^1.26.1"
 
 [tool.poetry.scripts]
 print = "fastapi_ros2.publisher_print:main"
