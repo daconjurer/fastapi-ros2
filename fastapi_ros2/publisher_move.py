@@ -7,33 +7,34 @@ import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-from fastapi_ros2.minimal_client import MinimalClientAsync
+from fastapi_ros2.services.add_two_ints.client import AddTwoIntsClientAsync
+
 
 app = FastAPI()
 
 
-class Response(BaseModel):
-    msg: int
+class SumResponse(BaseModel):
+    sum: int
 
 
-class MinimalPublisher(Node):
+class SumServer(Node):
     def __init__(self):
-        super().__init__('minimal_publisher')
-        self._client = MinimalClientAsync()
+        super().__init__('int_sum_service')
+        self._client = AddTwoIntsClientAsync()
 
-        @app.get('/publish', response_model=Response)
-        async def publish():
-            response = {"msg": -1}
-            server_response = self._client.send_request(1, 2)
-            response["msg"] = int(server_response.sum)
+        @app.get('/services/sum', response_model=SumResponse)
+        async def sum_service(a: int, b: int):
+            response = SumResponse(sum=-1)
+            server_response = self._client.send_request(a, b)
+            response.sum = int(server_response.sum)
             return response
 
 
 def main(args=None):
     rclpy.init()
-    minimal_publisher = MinimalPublisher()
+    sum_server = SumServer()
     executor = rclpy.executors.MultiThreadedExecutor()
-    executor.add_node(minimal_publisher)
+    executor.add_node(sum_server)
     spin_thread = threading.Thread(target=executor.spin, daemon=True)
     spin_thread.start()
 
