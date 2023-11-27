@@ -14,6 +14,7 @@ fastapi = "^0.100.0"
 uvicorn = {extras = ["standard"], version = "^0.23.1"}
 pydantic = {extras = ["email"], version = "^2.4.2"}
 numpy = "^1.26.1"
+loguru = "^0.7.2"
 
 [tool.poetry.scripts]
 print_publisher = "fastapi_ros2.examples.print_publisher:main"
