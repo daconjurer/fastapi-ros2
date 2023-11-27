@@ -39,5 +39,28 @@ python3 install/fastapi_ros2/lib/fastapi_ros2/add_server
 ## Alternative: running the Python modules
 
 ```
-poetry run python -m fastapi_ros2.examples.publisher_move
+poetry run python -m fastapi_ros2.examples.print_publisher
 ```
+
+## Starting the API with support for a publisher node
+The first endpoint of the API allows publishing to a topic `/print` a message of type `string`.
+
+To start the app, run:
+
+```
+poetry run python -m fastapi_ros2.examples.print_publisher
+```
+
+Then go to **http://127.0.0.1:5001/docs#** and try the endpoint `/topics/print`.
+
+![Simple publisher endpoint](assets/simple_publisher_endpoint.png)
+
+In parallel, sniff the topic on a terminal with:
+
+```
+ros2 topic echo /print
+```
+
+The terminal should show the messages published to the topic:
+
+![ROS topic echo](assets/ros_topic_echo.png)
