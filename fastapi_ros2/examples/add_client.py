@@ -19,10 +19,10 @@ class SumResponse(BaseModel):
 
 class SumClient(Node):
     def __init__(self):
-        super().__init__('int_sum_service')
+        super().__init__("int_sum_service")
         self._client = AddTwoIntsClientAsync()
 
-        @app.get('/services/sum', response_model=SumResponse)
+        @app.get("/services/sum", response_model=SumResponse)
         async def sum_service_client(a: int, b: int):
             response = SumResponse(sum=-1)
 
@@ -34,7 +34,7 @@ class SumClient(Node):
 
             self.get_logger().info(
                 f'Response from service "{self._client.name}" '
-                f'to request with params {a} to {b}: {result_sum}'
+                f"to request with params {a} to {b}: {result_sum}"
             )
             response.sum = result_sum
             return response
@@ -48,9 +48,9 @@ def main(args=None):
     spin_thread = threading.Thread(target=executor.spin, daemon=True)
     spin_thread.start()
 
-    uvicorn.run(app, port=5000, log_level='warning')
+    uvicorn.run(app, port=5000, log_level="warning")
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
