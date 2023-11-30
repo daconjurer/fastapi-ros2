@@ -3,7 +3,6 @@ import sys
 import rclpy
 from rclpy.node import Node
 from turtlesim.srv import TeleportAbsolute
-from turtlesim.srv._teleport_absolute import TeleportAbsolute_Response as Response
 
 
 class TurtlesimMoveClientAsync(Node):
