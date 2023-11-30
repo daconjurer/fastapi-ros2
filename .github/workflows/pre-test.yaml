@@ -1,0 +1,17 @@
+name: Pre-test
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - 
+        name: Checkout code
+        uses: actions/checkout@v4
+      -
+        name: Pre-test
+        uses: ./.github/actions/pre-test/

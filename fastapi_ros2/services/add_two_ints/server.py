@@ -1,13 +1,15 @@
-from example_interfaces.srv import AddTwoInts
+from example_interfaces.srv import AddTwoInts  # type: ignore
 
-import rclpy
-from rclpy.node import Node
+import rclpy  # type: ignore
+from rclpy.node import Node  # type: ignore
 
 
 class AddTwoIntsService(Node):
     def __init__(self):
-        super().__init__('add_two_ints_service')
-        self.srv = self.create_service(AddTwoInts, 'add_two_ints', self.add_two_ints_callback)
+        super().__init__("add_two_ints_service")
+        self.srv = self.create_service(
+            AddTwoInts, "add_two_ints", self.add_two_ints_callback
+        )
 
     def add_two_ints_callback(self, request, response):
         response.sum = request.a + request.b
@@ -24,5 +26,5 @@ def main():
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

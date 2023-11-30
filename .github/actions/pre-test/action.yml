@@ -1,0 +1,6 @@
+name: "pre-test"
+description: "Lint and format"
+runs:
+  using: "docker"
+  image: "dockerpaps/ros2-projects:latest"
+  entrypoint: ".github/actions/pre-test/run.sh"
