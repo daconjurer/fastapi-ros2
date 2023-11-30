@@ -18,11 +18,11 @@ class PrintResponse(BaseModel):
 
 class PrintPublisher(Node):
     def __init__(self):
-        super().__init__('print_publisher')
-        self.publisher_ = self.create_publisher(String, 'print', 10)
+        super().__init__("print_publisher")
+        self.publisher_ = self.create_publisher(String, "print", 10)
         self.i = 0
 
-        @app.get('/topics/print', response_model=PrintResponse)
+        @app.get("/topics/print", response_model=PrintResponse)
         async def publish_print():
             response = PrintResponse(msg="")
 
@@ -46,9 +46,9 @@ def main(args=None):
     print_publisher = PrintPublisher()
     spin_thread = threading.Thread(target=rclpy.spin, args=(print_publisher,))
     spin_thread.start()
-    uvicorn.run(app, port=5000, log_level='warning')
+    uvicorn.run(app, port=5000, log_level="warning")
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
