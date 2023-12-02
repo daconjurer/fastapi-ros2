@@ -42,20 +42,54 @@ python3 install/fastapi_ros2/lib/fastapi_ros2/add_server
 poetry run python -m fastapi_ros2.examples.print_publisher
 ```
 
-## Starting the API with support for a publisher node
-The first endpoint of the API allows publishing to a topic `/print` a message of type `string`.
+## Starting the API with `topics` and `services` routes
+The current version of the API has the following endpoints available:
 
-To start the app, run:
+![Alt text](assets/enpoints.png)
+
+These allow:
+- publishing to a topic `/print` a message of type `string`, using the `topics` route.
+- place a request to the service `example_interfaces.srv.AddTwoInts` to sum up two integers and get the result back.
+- place a request to the service `turtlesim.srv.TeleportAbsolute` to perform an absolute movement (position in cartesian x,y coordinates and angle in radians).
+
+To start the app, run the following command from the package root directory:
 
 ```
-poetry run python -m fastapi_ros2.examples.print_publisher
+poetry run uvicorn main:app
 ```
 
-Then go to **http://127.0.0.1:5001/docs#** and try the endpoint `/topics/print`.
+![Alt text](assets/startup.png)
 
-![Simple publisher endpoint](assets/simple_publisher_endpoint.png)
+Then go to **http://127.0.0.1:8001/docs**
 
-In parallel, sniff the topic on a terminal with:
+### Services
+
+This version of the app includes two services endpoints: `GET /services/sum` and `GET /services/move_turtle`. The endpoints rely on asynchronous clients for each of the ROS2 services, which poll the status of the service during the spin up, and the API does not start until the services are available (as shown in the previous image).
+
+The services live in the `services` module of the package, where any new service must be placed. When creating a new service, including both the `server` and `client` modules is recommended.
+
+From the package location, start the `add_two_ints` service:
+```
+poetry run python3 /workspace_dir/install/fastapi_ros2/lib/fastapi_ros2/service
+```
+
+**NOTE:** This command can only be run after installing the packages in the ROS2 workspace, so that the scripts become available (`ros2 run` equivalent).
+
+From the package location, start the `turtlesim` service:
+
+```
+ros2 run turtlesim turtlesim_node
+```
+
+This will spawn a new **turtlesim** window that is tied to the server that will receive the movement requests:
+
+![Alt text](assets/turtle.png)
+
+This window will show the movements of the turtle when the `GET /services/move_turtle` endpoint is used.
+
+### Topics
+
+When using the endpoint `GET /topics/print`, from a different terminal, sniff the `/print` topic with:
 
 ```
 ros2 topic echo /print
@@ -64,3 +98,5 @@ ros2 topic echo /print
 The terminal should show the messages published to the topic:
 
 ![ROS topic echo](assets/ros_topic_echo.png)
+
+The same will apply for any topic added to the API through the `topics` route.

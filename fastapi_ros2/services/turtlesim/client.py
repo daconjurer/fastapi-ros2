@@ -1,5 +1,7 @@
 import sys
 
+from loguru import logger
+
 import rclpy
 from rclpy.node import Node
 from turtlesim.srv import TeleportAbsolute
@@ -12,7 +14,7 @@ class TurtlesimMoveClientAsync(Node):
             TeleportAbsolute, "/turtle1/teleport_absolute"
         )
         while not self.client_.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info("service not available, waiting...")
+            logger.info("service not available, waiting...")
         self.req = TeleportAbsolute.Request()
 
     @property
@@ -35,8 +37,7 @@ def main():
     response = minimal_client.send_request(
         float(sys.argv[1]), float(sys.argv[2]), float(sys.argv[3])
     )
-    # response = minimal_client.send_request(float(2.0), float(2.0), float(2.0))
-    minimal_client.get_logger().info(
+    logger.info(
         f"Result of teleport_absolute with params "
         f"x={float(sys.argv[1])}, y={float(sys.argv[2])}, theta={float(sys.argv[2])}: {response}"
     )

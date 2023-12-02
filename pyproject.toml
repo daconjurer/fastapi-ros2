@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "fastapi_ros2"
-version = "0.1.0"
-description = "Does something cool"
-authors = ["Victor Sandoval <stb.4421@gmail.com>"]
+version = "0.2.0"
+description = "A FastAPI based API for ROS2"
+authors = ["Victor Sandoval <vs.software.eng@gmail.com>"]
 
 packages = [
     {include = "fastapi_ros2"},
