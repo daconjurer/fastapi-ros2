@@ -1,4 +1,5 @@
 #! /bin/bash
 
-ruff check fastapi_ros2/
+ruff check --diff fastapi_ros2/
+ruff format --diff fastapi_ros2/
 # mypy fastapi_ros2/
