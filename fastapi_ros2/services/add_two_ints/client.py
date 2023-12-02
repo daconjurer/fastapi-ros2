@@ -19,7 +19,7 @@ class AddTwoIntsClientAsync(Node):
     def name(self):
         return self.client_.srv_name
 
-    def send_request(self, a, b):
+    def send_request(self, a: int, b: int):
         self.req.a = a
         self.req.b = b
         self.future = self.client_.call_async(self.req)
