@@ -18,9 +18,7 @@ class PrintPublisher(Node):
     def publish_print(self) -> int:
         msg = String()
         msg.data = f"Hello World: {self.i}"
-        logger.info(
-            f'Publishing "{msg.data}" to topic "{self.topic}"'
-        )
+        logger.info(f'Publishing "{msg.data}" to topic "{self.topic}"')
         self.publisher_.publish(msg)
         self.i += 1
 
