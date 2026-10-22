@@ -27,13 +27,9 @@ For the simple publisher node:
 python3 install/fastapi_ros2/lib/fastapi_ros2/print_publisher
 ```
 
-For the service nodes (in different terminals):
+For the service node:
 ```
 python3 install/fastapi_ros2/lib/fastapi_ros2/service
-```
-
-```
-python3 install/fastapi_ros2/lib/fastapi_ros2/add_server
 ```
 
 ## Alternative: running the Python modules
@@ -60,7 +56,7 @@ poetry run uvicorn main:app
 
 ![Alt text](assets/startup.png)
 
-Then go to **http://127.0.0.1:8001/docs**
+Then go to **http://127.0.0.1:8000/docs**
 
 ### Services
 
