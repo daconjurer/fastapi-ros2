@@ -14,7 +14,7 @@ app.include_router(print_router)
 
 
 def main(args=None):
-    uvicorn.run(app, port=5000, log_level='warning')
+    uvicorn.run(app, port=8000, log_level='warning')
     rclpy.shutdown()
 
 
