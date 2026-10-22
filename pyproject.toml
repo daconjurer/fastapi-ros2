@@ -10,7 +10,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "~3.10, <=3.12"
-fastapi = "^0.109.0"
+fastapi = "^0.111.0"
 uvicorn = {extras = ["standard"], version = "^0.23.1"}
 pydantic = {extras = ["email"], version = "^2.4.2"}
 numpy = "^1.26.1"
@@ -18,7 +18,6 @@ loguru = "^0.7.2"
 
 [tool.poetry.scripts]
 print_publisher = "fastapi_ros2.examples.print_publisher:main"
-add_server = "fastapi_ros2.examples.add_server:main"
 service = "fastapi_ros2.services.add_two_ints.server:main"
 client = "fastapi_ros2.services.add_two_ints.client:main"
 
