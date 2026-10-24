@@ -15,7 +15,9 @@ class ServiceTimeoutError(Exception):
 
 # Requests beyond the service QoS history depth are silently dropped by the
 # middleware, so each client only gets that many calls in flight; the rest wait.
-_in_flight: weakref.WeakKeyDictionary = weakref.WeakKeyDictionary()
+_in_flight: weakref.WeakKeyDictionary[Client, asyncio.Semaphore] = (
+    weakref.WeakKeyDictionary()
+)
 
 
 async def call_service(client: Client, request, timeout_sec: float = 5.0):
@@ -36,8 +38,9 @@ async def call_service(client: Client, request, timeout_sec: float = 5.0):
 
 
 async def _call(client: Client, request):
-    slots = _in_flight.setdefault(client, asyncio.Semaphore(client.qos_profile.depth))
-    async with slots:
+    if client not in _in_flight:
+        _in_flight[client] = asyncio.Semaphore(client.qos_profile.depth)
+    async with _in_flight[client]:
         loop = asyncio.get_running_loop()
         result = loop.create_future()
 
