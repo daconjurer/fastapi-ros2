@@ -22,8 +22,8 @@ class SumClient(Node):
         super().__init__("int_sum_service")
         self._client = AddTwoIntsClientAsync(self)
 
-        @app.get("/services/sum", response_model=SumResponse)
-        async def sum_service_client(a: int, b: int):
+        @app.get("/services/sum")
+        async def sum_service_client(a: int, b: int) -> SumResponse:
             response = SumResponse(sum=-1)
 
             self.get_logger().info(

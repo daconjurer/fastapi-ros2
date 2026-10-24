@@ -10,8 +10,8 @@ class PrintResponse(BaseModel):
     count: int
 
 
-@router.post("/topics/print", response_model=PrintResponse)
-async def print_topic(request: Request):
+@router.post("/topics/print")
+async def print_topic(request: Request) -> PrintResponse:
     response = PrintResponse(count=-1)
     result_print = await request.state.print_controller.publish_print()
 

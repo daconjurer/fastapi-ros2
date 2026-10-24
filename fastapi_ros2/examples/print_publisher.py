@@ -22,8 +22,8 @@ class PrintPublisher(Node):
         self.publisher_ = self.create_publisher(String, "print", 10)
         self.i = 0
 
-        @app.get("/topics/print", response_model=PrintResponse)
-        async def publish_print():
+        @app.get("/topics/print")
+        async def publish_print() -> PrintResponse:
             response = PrintResponse(msg="")
 
             msg = String()

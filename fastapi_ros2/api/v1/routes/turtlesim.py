@@ -43,8 +43,8 @@ class MoveResponse(BaseModel):
     done: bool
 
 
-@router.post("/services/move_turtle", response_model=MoveResponse)
-async def move_turtle_service(request: Request, body: MoveRequest):
+@router.post("/services/move_turtle")
+async def move_turtle_service(request: Request, body: MoveRequest) -> MoveResponse:
     response = MoveResponse(done=False)
     result_move = await request.state.turtle_controller.move_absolute(
         body.x, body.y, body.theta

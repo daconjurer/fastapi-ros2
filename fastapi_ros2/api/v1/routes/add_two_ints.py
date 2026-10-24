@@ -45,8 +45,8 @@ class AddResponse(BaseModel):
     sum: int
 
 
-@router.post("/services/sum", response_model=AddResponse)
-async def sum_service(request: Request, body: AddRequest):
+@router.post("/services/sum")
+async def sum_service(request: Request, body: AddRequest) -> AddResponse:
     response = AddResponse(sum=-1)
     result_sum = await request.state.add_controller.add_two_ints(body.a, body.b)
 
