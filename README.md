@@ -96,7 +96,10 @@ Then go to **http://127.0.0.1:8000/docs**
 
 ### Services
 
-This version of the app includes two services endpoints: `GET /services/sum` and `GET /services/move_turtle`. The endpoints rely on asynchronous clients for each of the ROS2 services, which poll the status of the service during the spin up, and the API does not start until the services are available (as shown in the previous image).
+This version of the app includes two services endpoints: `GET /services/sum` and `GET /services/move_turtle`.
+The endpoints await asynchronous clients for each of the ROS2 services, so a slow service does not block the rest of the API.
+The API starts whether or not the services are running.
+A call returns `503` if its service is not available and `504` if it does not respond within 5 seconds.
 
 The services live in the `services` module of the package, where any new service must be placed. When creating a new service, including both the `server` and `client` modules is recommended.
 

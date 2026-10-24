@@ -1,8 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from pydantic import BaseModel
-
-from fastapi_ros2.nodes import print_controller
 
 
 router = APIRouter()
@@ -13,9 +11,9 @@ class PrintResponse(BaseModel):
 
 
 @router.get("/topics/print", response_model=PrintResponse)
-async def sum_service():
+async def sum_service(request: Request):
     response = PrintResponse(count=-1)
-    result_print = await print_controller.publish_print()
+    result_print = await request.state.print_controller.publish_print()
 
     response.count = result_print
     return response

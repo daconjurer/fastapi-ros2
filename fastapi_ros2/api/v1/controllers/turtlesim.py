@@ -12,7 +12,7 @@ class TurtleSimController:
         logger.info(
             f'Sending request to service "{self.client.name}" with params {x}, {y} and {theta}'
         )
-        server_response = self.client.send_request(x, y, theta)
+        server_response = await self.client.send_request(x, y, theta)
         result_move = True if isinstance(server_response, Response) else False
 
         logger.info(

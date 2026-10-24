@@ -11,7 +11,7 @@ class AddTwoIntsController:
         logger.info(
             f'Sending request to service "{self.client.name}" with params {a} and {b}'
         )
-        server_response = self.client.send_request(a, b)
+        server_response = await self.client.send_request(a, b)
         result_sum = int(server_response.sum)
 
         logger.info(

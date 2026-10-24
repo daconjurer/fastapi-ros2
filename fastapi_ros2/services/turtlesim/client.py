@@ -6,6 +6,8 @@ import rclpy
 from rclpy.node import Node
 from turtlesim.srv import TeleportAbsolute
 
+from fastapi_ros2.services.call import call_service
+
 
 class TurtlesimMoveClientAsync(Node):
     def __init__(self):
@@ -13,30 +15,29 @@ class TurtlesimMoveClientAsync(Node):
         self.client_ = self.create_client(
             TeleportAbsolute, "/turtle1/teleport_absolute"
         )
-        while not self.client_.wait_for_service(timeout_sec=1.0):
-            logger.info("service not available, waiting...")
-        self.req = TeleportAbsolute.Request()
 
     @property
     def name(self):
         return self.client_.srv_name
 
-    def send_request(self, x: float, y: float, theta: float):
-        self.req.x = x
-        self.req.y = y
-        self.req.theta = theta
-        self.future = self.client_.call_async(self.req)
-        rclpy.spin_until_future_complete(self, self.future)
-        return self.future.result()
+    async def send_request(self, x: float, y: float, theta: float):
+        return await call_service(
+            self.client_, TeleportAbsolute.Request(x=x, y=y, theta=theta)
+        )
 
 
 def main():
     rclpy.init()
 
     minimal_client = TurtlesimMoveClientAsync()
-    response = minimal_client.send_request(
-        float(sys.argv[1]), float(sys.argv[2]), float(sys.argv[3])
+    minimal_client.client_.wait_for_service()
+    future = minimal_client.client_.call_async(
+        TeleportAbsolute.Request(
+            x=float(sys.argv[1]), y=float(sys.argv[2]), theta=float(sys.argv[3])
+        )
     )
+    rclpy.spin_until_future_complete(minimal_client, future)
+    response = future.result()
     logger.info(
         f"Result of teleport_absolute with params "
         f"x={float(sys.argv[1])}, y={float(sys.argv[2])}, theta={float(sys.argv[2])}: {response}"
