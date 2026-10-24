@@ -96,7 +96,16 @@ Then go to **http://127.0.0.1:8000/docs**
 
 ### Services
 
-This version of the app includes two services endpoints: `GET /services/sum` and `GET /services/move_turtle`.
+This version of the app includes two services endpoints: `POST /services/sum` and `POST /services/move_turtle`.
+They take JSON bodies, for example:
+
+```
+curl -X POST localhost:8000/services/sum -H 'Content-Type: application/json' -d '{"a": 2, "b": 3}'
+curl -X POST localhost:8000/services/move_turtle -H 'Content-Type: application/json' -d '{"x": 3, "y": 4, "theta": 1.5}'
+```
+
+Inputs are validated against the ROS message field types before they reach ROS: integers must fit in 64 bits (and so must their sum), and floats must be finite and fit in 32 bits.
+Invalid input returns `422`.
 The endpoints await asynchronous clients for each of the ROS2 services, so a slow service does not block the rest of the API.
 The API starts whether or not the services are running.
 A call returns `503` if its service is not available and `504` if it does not respond within 5 seconds.
@@ -120,11 +129,11 @@ This will spawn a new **turtlesim** window that is tied to the server that will 
 
 ![Alt text](assets/turtle.png)
 
-This window will show the movements of the turtle when the `GET /services/move_turtle` endpoint is used.
+This window will show the movements of the turtle when the `POST /services/move_turtle` endpoint is used.
 
 ### Topics
 
-When using the endpoint `GET /topics/print`, from a different terminal, sniff the `/print` topic with:
+When using the endpoint `POST /topics/print`, from a different terminal, sniff the `/print` topic with:
 
 ```
 ros2 topic echo /print

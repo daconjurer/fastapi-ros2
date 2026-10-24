@@ -1,5 +1,8 @@
 import uvicorn
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from fastapi_ros2.api.v1.routes.add_two_ints import router as add_two_ints_router
@@ -12,6 +15,17 @@ app = FastAPI(lifespan=ros_lifespan)
 app.include_router(add_two_ints_router)
 app.include_router(turtle_router)
 app.include_router(print_router)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request: Request, exc: RequestValidationError):
+    try:
+        return await request_validation_exception_handler(request, exc)
+    except ValueError:
+        # The default 422 echoes the invalid input, which cannot be encoded as
+        # JSON when it is NaN or infinity; leave the input out in that case.
+        errors = [{k: v for k, v in e.items() if k != "input"} for e in exc.errors()]
+        return JSONResponse(status_code=422, content={"detail": jsonable_encoder(errors)})
 
 
 @app.exception_handler(ServiceUnavailableError)
