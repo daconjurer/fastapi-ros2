@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Request
 
 from pydantic import AfterValidator, BaseModel, Field
+from pydantic_core import PydanticCustomError
 
 
 router = APIRouter()
@@ -15,7 +16,9 @@ FLOAT32_MAX = 3.4028234663852886e38
 
 def _fits_float32(value: float) -> float:
     if abs(value) > FLOAT32_MAX:
-        raise ValueError("must fit in a 32-bit float")
+        raise PydanticCustomError(
+            "float32_overflow", "Input should fit in a 32-bit float"
+        )
     return value
 
 

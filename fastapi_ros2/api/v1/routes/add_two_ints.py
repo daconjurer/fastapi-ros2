@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Request
 
 from pydantic import AfterValidator, BaseModel, Field, model_validator
+from pydantic_core import PydanticCustomError
 
 
 router = APIRouter()
@@ -12,7 +13,9 @@ INT64_MIN, INT64_MAX = -(2**63), 2**63 - 1
 
 def _fits_int64(value: int) -> int:
     if not INT64_MIN <= value <= INT64_MAX:
-        raise ValueError("must fit in a signed 64-bit integer")
+        raise PydanticCustomError(
+            "int64_overflow", "Input should fit in a signed 64-bit integer"
+        )
     return value
 
 
@@ -32,7 +35,9 @@ class AddRequest(BaseModel):
     def sum_fits_int64(self) -> "AddRequest":
         # An overflowing sum crashes the add_two_ints server when it responds.
         if not INT64_MIN <= self.a + self.b <= INT64_MAX:
-            raise ValueError("a + b must fit in a signed 64-bit integer")
+            raise PydanticCustomError(
+                "sum_overflow", "a + b should fit in a signed 64-bit integer"
+            )
         return self
 
 
