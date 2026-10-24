@@ -1,12 +1,13 @@
 from loguru import logger
+from rclpy.node import Node
 
 from turtlesim.srv._teleport_absolute import TeleportAbsolute_Response as Response
 from fastapi_ros2.services.turtlesim.client import TurtlesimMoveClientAsync
 
 
 class TurtleSimController:
-    def __init__(self):
-        self.client = TurtlesimMoveClientAsync()
+    def __init__(self, node: Node):
+        self.client = TurtlesimMoveClientAsync(node)
 
     async def move_absolute(self, x: float, y: float, theta: float) -> bool:
         logger.info(

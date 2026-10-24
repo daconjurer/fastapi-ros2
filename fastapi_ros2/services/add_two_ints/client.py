@@ -9,10 +9,9 @@ from example_interfaces.srv import AddTwoInts
 from fastapi_ros2.services.call import call_service
 
 
-class AddTwoIntsClientAsync(Node):
-    def __init__(self):
-        super().__init__("add_two_ints_async_client")
-        self.client_ = self.create_client(AddTwoInts, "add_two_ints")
+class AddTwoIntsClientAsync:
+    def __init__(self, node: Node):
+        self.client_ = node.create_client(AddTwoInts, "add_two_ints")
 
     @property
     def name(self):
@@ -25,18 +24,19 @@ class AddTwoIntsClientAsync(Node):
 def main():
     rclpy.init()
 
-    minimal_client = AddTwoIntsClientAsync()
+    node = rclpy.create_node("add_two_ints_async_client")
+    minimal_client = AddTwoIntsClientAsync(node)
     minimal_client.client_.wait_for_service()
     future = minimal_client.client_.call_async(
         AddTwoInts.Request(a=int(sys.argv[1]), b=int(sys.argv[2]))
     )
-    rclpy.spin_until_future_complete(minimal_client, future)
+    rclpy.spin_until_future_complete(node, future)
     response = future.result()
     logger.info(
         f"Result of add_two_ints: for {int(sys.argv[1])} + {int(sys.argv[2])} = {response.sum}"
     )
 
-    minimal_client.destroy_node()
+    node.destroy_node()
     rclpy.shutdown()
 
 
