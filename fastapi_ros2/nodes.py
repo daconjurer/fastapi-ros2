@@ -1,31 +1,38 @@
-from typing import List
+from contextlib import asynccontextmanager
 import threading
 
 import rclpy
+from fastapi import FastAPI
+from rclpy.executors import MultiThreadedExecutor
 
 from fastapi_ros2.api.v1.controllers.add_two_ints import AddTwoIntsController
 from fastapi_ros2.api.v1.controllers.turtlesim import TurtleSimController
 from fastapi_ros2.api.v1.controllers.print import PrintController
 
 
-rclpy.init()
+@asynccontextmanager
+async def ros_lifespan(app: FastAPI):
+    """Run the API's ROS2 node for as long as the app runs.
 
-# ROS2 nodes tied to the API defined and added to the executor here
-add_controller = AddTwoIntsController()
-turtle_controller = TurtleSimController()
-print_controller = PrintController()
+    All clients and publishers live on this one node. The controllers are
+    exposed to the routes as `request.state.<name>`.
+    """
+    rclpy.init()
+    node = rclpy.create_node("fastapi_ros2")
 
-# Define executor
-executor = rclpy.executors.MultiThreadedExecutor()
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
+    spin_thread = threading.Thread(target=executor.spin, daemon=True)
+    spin_thread.start()
 
-# Add client nodes
-executor.add_node(add_controller.client)
-executor.add_node(turtle_controller.client)
-executor.add_node(print_controller.publisher)
-
-spin_thread = threading.Thread(target=executor.spin, daemon=True)
-spin_thread.start()
-
-
-def get_nodes() -> List:
-    return executor.get_nodes()
+    try:
+        yield {
+            "add_controller": AddTwoIntsController(node),
+            "turtle_controller": TurtleSimController(node),
+            "print_controller": PrintController(node),
+        }
+    finally:
+        executor.shutdown()
+        spin_thread.join()
+        node.destroy_node()
+        rclpy.try_shutdown()

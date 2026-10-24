@@ -20,7 +20,7 @@ class SumResponse(BaseModel):
 class SumClient(Node):
     def __init__(self):
         super().__init__("int_sum_service")
-        self._client = AddTwoIntsClientAsync()
+        self._client = AddTwoIntsClientAsync(self)
 
         @app.get("/services/sum", response_model=SumResponse)
         async def sum_service_client(a: int, b: int):
@@ -29,7 +29,7 @@ class SumClient(Node):
             self.get_logger().info(
                 f'Sending request to service "{self._client.name}" with params {a} to {b}'
             )
-            server_response = self._client.send_request(a, b)
+            server_response = await self._client.send_request(a, b)
             result_sum = int(server_response.sum)
 
             self.get_logger().info(
