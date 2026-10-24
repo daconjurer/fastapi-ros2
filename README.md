@@ -6,6 +6,42 @@ directory of a valid ROS2 workspace and built with
 [colcon](https://colcon.readthedocs.io/en/released/index.html#) just like any
 other package.
 
+## Quick start with Docker
+
+Run the API, turtlesim, and the `add_two_ints` service on ROS 2 Jazzy with one command:
+
+```
+docker compose up --build
+```
+
+Then go to **http://127.0.0.1:8000/docs**.
+If port 8000 is taken, pick another host port with `API_PORT=8001 docker compose up --build`.
+Turtlesim runs headless in the container, so check the turtle's position with:
+
+```
+docker compose exec turtlesim bash -c 'source /opt/ros/jazzy/setup.bash && ros2 topic echo --once /turtle1/pose'
+```
+
+## Development
+
+There are two Docker-based workflows, both on the same image as the quick start.
+
+**Any editor, with `docker compose watch`.**
+Run `docker compose watch` and edit on the host.
+Saving a file under `fastapi_ros2/` or `main.py` syncs it into the containers and restarts the `api` and `add_two_ints` services.
+Changing `pyproject.toml` or `poetry.lock` rebuilds the image.
+
+**Dev container.**
+Open the repo in VS Code (or another client that supports dev containers) and reopen it in the container.
+This starts turtlesim and `add_two_ints` next to a `dev` container with the repo mounted at `/app`, ROS sourced, and the dev tools (ruff, mypy, nox) installed.
+Start the API yourself from a terminal in the container, so you can use reload and the debugger:
+
+```
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+The dev container is a separate compose project, so it can run alongside `docker compose up`, as long as they use different `API_PORT` values.
+
 ## Installation
 
 The package can be installed with colcon using

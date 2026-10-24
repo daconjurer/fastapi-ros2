@@ -1,0 +1,19 @@
+{
+	"name": "fastapi-ros2",
+	"dockerComposeFile": ["../compose.yaml", "compose.yaml"],
+	"service": "dev",
+	// Run uvicorn yourself in the dev container instead of the `api` service.
+	"runServices": ["dev", "turtlesim", "add_two_ints"],
+	"workspaceFolder": "/app",
+	"shutdownAction": "stopCompose",
+	// The image only has the main dependencies; add the dev and test groups (ruff, mypy, nox).
+	"postCreateCommand": "poetry install --no-root --no-interaction",
+	"customizations": {
+		"vscode": {
+			"settings": {
+				"python.defaultInterpreterPath": "/opt/venv/bin/python"
+			},
+			"extensions": ["ms-python.python", "charliermarsh.ruff"]
+		}
+	}
+}
