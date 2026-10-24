@@ -22,6 +22,8 @@ ServiceResponse = Any
 
 # Requests beyond the service QoS history depth are silently dropped by the
 # middleware, so each client only gets that many calls in flight; the rest wait.
+# ponytail: burst protection for this process only, not added capacity; replicas
+# each get their own limit, so raise the server's QoS depth if the API scales out.
 _in_flight: weakref.WeakKeyDictionary[Client, asyncio.Semaphore] = (
     weakref.WeakKeyDictionary()
 )
