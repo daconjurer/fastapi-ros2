@@ -5,10 +5,9 @@ from rclpy.node import Node
 from std_msgs.msg import String
 
 
-class PrintPublisher(Node):
-    def __init__(self, name: str = "print_publisher"):
-        super().__init__(node_name=name)
-        self.publisher_ = self.create_publisher(String, "print", 10)
+class PrintPublisher:
+    def __init__(self, node: Node):
+        self.publisher_ = node.create_publisher(String, "print", 10)
         self.i = 0
 
     @property
@@ -31,10 +30,11 @@ class PrintPublisher(Node):
 def main():
     rclpy.init()
 
-    minimal_publisher = PrintPublisher()
+    node = rclpy.create_node("print_publisher")
+    minimal_publisher = PrintPublisher(node)
     minimal_publisher.publish_print()
 
-    minimal_publisher.destroy_node()
+    node.destroy_node()
     rclpy.shutdown()
 
 
