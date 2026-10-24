@@ -1,0 +1,41 @@
+x-ros: &ros
+  build: .
+  image: fastapi-ros2
+
+# `docker compose watch`: code edits restart the services running our code,
+# dependency changes rebuild the image.
+x-develop: &develop
+  watch:
+    - path: ./fastapi_ros2
+      target: /app/fastapi_ros2
+      action: sync+restart
+    - path: ./main.py
+      target: /app/main.py
+      action: sync+restart
+    - path: ./pyproject.toml
+      action: rebuild
+    - path: ./poetry.lock
+      action: rebuild
+
+services:
+  turtlesim:
+    <<: *ros
+    command: ros2 run turtlesim turtlesim_node
+    environment:
+      # No display in the container, so turtlesim renders off-screen.
+      QT_QPA_PLATFORM: offscreen
+
+  add_two_ints:
+    <<: *ros
+    command: python3 -m fastapi_ros2.services.add_two_ints.server
+    develop: *develop
+
+  api:
+    <<: *ros
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
+    depends_on:
+      - turtlesim
+      - add_two_ints
+    develop: *develop

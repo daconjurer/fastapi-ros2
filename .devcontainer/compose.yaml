@@ -1,0 +1,16 @@
+# Added on top of ../compose.yaml; relative paths resolve from the repo root.
+# Own project name, so it runs alongside a plain `docker compose up`.
+name: fastapi-ros2-dev
+
+services:
+  dev:
+    image: fastapi-ros2
+    build: .
+    command: sleep infinity
+    volumes:
+      - .:/app
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
+    depends_on:
+      - turtlesim
+      - add_two_ints
