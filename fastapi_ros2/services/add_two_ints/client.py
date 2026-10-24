@@ -17,7 +17,7 @@ class AddTwoIntsClientAsync:
     def name(self):
         return self.client_.srv_name
 
-    async def send_request(self, a: int, b: int):
+    async def send_request(self, a: int, b: int) -> AddTwoInts.Response:
         return await call_service(self.client_, AddTwoInts.Request(a=a, b=b))
 
 

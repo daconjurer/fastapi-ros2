@@ -19,7 +19,9 @@ class TurtlesimMoveClientAsync:
     def name(self):
         return self.client_.srv_name
 
-    async def send_request(self, x: float, y: float, theta: float):
+    async def send_request(
+        self, x: float, y: float, theta: float
+    ) -> TeleportAbsolute.Response:
         return await call_service(
             self.client_, TeleportAbsolute.Request(x=x, y=y, theta=theta)
         )
