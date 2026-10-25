@@ -27,7 +27,9 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
         # The default 422 echoes the invalid input, which cannot be encoded as
         # JSON when it is NaN or infinity; leave the input out in that case.
         errors = [{k: v for k, v in e.items() if k != "input"} for e in exc.errors()]
-        return JSONResponse(status_code=422, content={"detail": jsonable_encoder(errors)})
+        return JSONResponse(
+            status_code=422, content={"detail": jsonable_encoder(errors)}
+        )
 
 
 @app.exception_handler(ServiceUnavailableError)
@@ -41,8 +43,8 @@ async def service_timeout_handler(request: Request, exc: ServiceTimeoutError):
 
 
 def main(args=None):
-    uvicorn.run(app, port=8000, log_level='warning')
+    uvicorn.run(app, port=8000, log_level="warning")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

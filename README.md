@@ -33,7 +33,7 @@ Changing `pyproject.toml` or `poetry.lock` rebuilds the image.
 
 **Dev container.**
 Open the repo in VS Code (or another client that supports dev containers) and reopen it in the container.
-This starts turtlesim and `add_two_ints` next to a `dev` container with the repo mounted at `/app`, ROS sourced, and the dev tools (ruff, mypy, nox) installed.
+This starts turtlesim and `add_two_ints` next to a `dev` container with the repo mounted at `/app`, ROS sourced, and the dev tools (ruff, mypy, pytest) installed.
 Start the API yourself from a terminal in the container, so you can use reload and the debugger:
 
 ```
@@ -41,6 +41,15 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 The dev container is a separate compose project, so it can run alongside `docker compose up`, as long as they use different `API_PORT` values.
+
+**Lint and tests.**
+`./scripts/check.sh` runs ruff and pytest, and CI runs it on every push.
+The tests replace the API's ROS node with fakes, so they need the ROS message packages but no running services.
+Run it in the dev container, or from the host with:
+
+```
+docker compose build api && docker compose run --rm --no-deps api bash -c "poetry install --no-root && ./scripts/check.sh"
+```
 
 ## Installation
 

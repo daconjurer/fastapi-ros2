@@ -12,7 +12,7 @@ class PrintPublisher:
 
     @property
     def topic(self):
-        return "/" + self.publisher_.topic
+        return self.publisher_.topic_name
 
     def publish_print(self) -> int:
         msg = String()

@@ -6,7 +6,7 @@
 	"runServices": ["dev", "turtlesim", "add_two_ints"],
 	"workspaceFolder": "/app",
 	"shutdownAction": "stopCompose",
-	// The image only has the main dependencies; add the dev and test groups (ruff, mypy, nox).
+	// The image only has the main dependencies; add the dev and test groups (ruff, mypy, pytest).
 	"postCreateCommand": "poetry install --no-root --no-interaction",
 	"customizations": {
 		"vscode": {
