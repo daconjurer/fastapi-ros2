@@ -1,8 +1,10 @@
 from typing import Literal
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Response
 
 from pydantic import BaseModel
+
+from fastapi_ros2.nodes import Ros
 
 
 router = APIRouter()
@@ -21,16 +23,16 @@ class HealthResponse(BaseModel):
 
 
 @router.get("/health", responses={503: {"model": HealthResponse}})
-async def health(request: Request, response: Response) -> HealthResponse:
-    node = request.state.node
+async def health(ros: Ros, response: Response) -> HealthResponse:
+    node = ros.node
     # Once rclpy is shut down, the node and its clients are destroyed.
     context_ok = node.context.ok()
     node_health = NodeHealth(
-        name=request.state.node_name,
+        name=ros.node_name,
         # Without the executor thread no ROS response or message ever arrives.
-        spinning=context_ok and request.state.spin_thread.is_alive(),
+        spinning=context_ok and ros.spin_thread.is_alive(),
     )
-    services = dict.fromkeys(request.state.service_names, False)
+    services = dict.fromkeys(ros.service_names, False)
     if context_ok:
         services = {c.service_name: c.service_is_ready() for c in node.clients}
 

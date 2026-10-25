@@ -33,7 +33,7 @@ Changing `pyproject.toml` or `poetry.lock` rebuilds the image.
 
 **Dev container.**
 Open the repo in VS Code (or another client that supports dev containers) and reopen it in the container.
-This starts turtlesim and `add_two_ints` next to a `dev` container with the repo mounted at `/app`, ROS sourced, and the dev tools (ruff, mypy, pytest) installed.
+This starts turtlesim and `add_two_ints` next to a `dev` container with the repo mounted at `/app`, ROS sourced, and the dev tools (ruff, basedpyright, pytest) installed.
 Start the API yourself from a terminal in the container, so you can use reload and the debugger:
 
 ```
@@ -43,7 +43,8 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 The dev container is a separate compose project, so it can run alongside `docker compose up`, as long as they use different `API_PORT` values.
 
 **Lint and tests.**
-`./scripts/check.sh` runs ruff and pytest, and CI runs it on every push.
+`./scripts/check.sh` runs ruff, basedpyright, and pytest, and CI runs it on every push.
+basedpyright runs in its `recommended` mode, so warnings fail the check too.
 The tests run the API with its real ROS node and serve the ROS services from the test process, on a ROS domain of their own, so they need ROS installed but no running services.
 Run it in the dev container, or from the host with:
 
@@ -116,7 +117,7 @@ curl -X POST localhost:8000/services/move_turtle -H 'Content-Type: application/j
 Inputs are validated against the ROS message field types before they reach ROS: integers must fit in 64 bits (and so must their sum), and floats must be finite and fit in 32 bits.
 Invalid input returns `422`.
 Request and response bodies mirror the ROS service's request and response fields, so `/services/sum` returns `{"sum": 5}` and `/services/move_turtle` returns `{}`, since `TeleportAbsolute` responds with no fields.
-Their Pydantic models are derived from the ROS types with `ros_model()` in `fastapi_ros2/api/v1/models.py`.
+Their Pydantic models declare the ROS types' fields, and `@mirrors` in `fastapi_ros2/api/v1/models.py` checks at import that they match the ROS messages' names, order, and types.
 The endpoints await asynchronous clients for each of the ROS2 services, so a slow service does not block the rest of the API.
 The API starts whether or not the services are running.
 A call returns `503` if its service is not available and `504` if it does not respond within 5 seconds.

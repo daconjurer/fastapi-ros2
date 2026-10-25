@@ -1,9 +1,11 @@
+from typing import final
 from loguru import logger
 from rclpy.node import Node
 
 from fastapi_ros2.topics.print_publisher import PrintPublisher
 
 
+@final
 class PrintController:
     def __init__(self, node: Node):
         self.publisher = PrintPublisher(node)

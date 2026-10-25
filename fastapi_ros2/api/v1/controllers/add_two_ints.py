@@ -1,3 +1,4 @@
+from typing import final
 from example_interfaces.srv import AddTwoInts
 from loguru import logger
 from rclpy.node import Node
@@ -5,6 +6,7 @@ from rclpy.node import Node
 from fastapi_ros2.services.add_two_ints.client import AddTwoIntsClientAsync
 
 
+@final
 class AddTwoIntsController:
     def __init__(self, node: Node):
         self.client = AddTwoIntsClientAsync(node)

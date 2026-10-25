@@ -1,3 +1,4 @@
+from typing import final
 from loguru import logger
 from rclpy.node import Node
 from turtlesim_msgs.srv import TeleportAbsolute
@@ -5,6 +6,7 @@ from turtlesim_msgs.srv import TeleportAbsolute
 from fastapi_ros2.services.turtlesim.client import TurtlesimMoveClientAsync
 
 
+@final
 class TurtleSimController:
     def __init__(self, node: Node):
         self.client = TurtlesimMoveClientAsync(node)
