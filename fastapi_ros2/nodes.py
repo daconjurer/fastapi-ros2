@@ -14,8 +14,8 @@ from fastapi_ros2.api.v1.controllers.print import PrintController
 async def ros_lifespan(app: FastAPI):
     """Run the API's ROS2 node for as long as the app runs.
 
-    All clients and publishers live on this one node. The controllers are
-    exposed to the routes as `request.state.<name>`.
+    All clients and publishers live on this one node. The controllers, the node,
+    and the spin thread are exposed to the routes as `request.state.<name>`.
     """
     rclpy.init()
     node = rclpy.create_node("fastapi_ros2")
@@ -27,6 +27,8 @@ async def ros_lifespan(app: FastAPI):
 
     try:
         yield {
+            "node": node,
+            "spin_thread": spin_thread,
             "add_controller": AddTwoIntsController(node),
             "turtle_controller": TurtleSimController(node),
             "print_controller": PrintController(node),
