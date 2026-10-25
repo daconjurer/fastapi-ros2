@@ -1,54 +1,40 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Body, Request
+from turtlesim.srv import TeleportAbsolute
 
-from pydantic import AfterValidator, BaseModel, Field
-from pydantic_core import PydanticCustomError
-
-
-router = APIRouter()
-
-FLOAT32_MAX = 3.4028234663852886e38
-
-# TeleportAbsolute fields are float32. NaN, infinity, or values beyond float32
-# corrupt the turtle's pose; finite values off the canvas are clamped by turtlesim.
+from fastapi_ros2.api.v1.models import SERVICE_ERRORS, ros_model
 
 
-def _fits_float32(value: float) -> float:
-    if abs(value) > FLOAT32_MAX:
-        raise PydanticCustomError(
-            "float32_overflow", "Input should fit in a 32-bit float"
-        )
-    return value
+router = APIRouter(responses=SERVICE_ERRORS)
 
 
-Float32 = Annotated[
-    float,
-    Field(
-        allow_inf_nan=False,
-        description="Finite, within the 32-bit float range",
-        json_schema_extra={"format": "float"},
+# Finite values off the canvas (about 0 to 11 on each axis) are clamped by turtlesim.
+class MoveRequest(ros_model(TeleportAbsolute.Request)):  # type: ignore[misc]
+    pass
+
+
+# TeleportAbsolute has no response fields, so success is an empty object.
+class MoveResponse(ros_model(TeleportAbsolute.Response)):  # type: ignore[misc]
+    pass
+
+
+MoveBody = Annotated[
+    MoveRequest,
+    Body(
+        openapi_examples={
+            "pose": {
+                "summary": "A pose inside the canvas",
+                "value": {"x": 3.0, "y": 4.0, "theta": 1.5},
+            }
+        }
     ),
-    AfterValidator(_fits_float32),
 ]
 
 
-class MoveRequest(BaseModel):
-    x: Float32
-    y: Float32
-    theta: Float32
-
-
-class MoveResponse(BaseModel):
-    done: bool
-
-
 @router.post("/services/move_turtle")
-async def move_turtle_service(request: Request, body: MoveRequest) -> MoveResponse:
-    response = MoveResponse(done=False)
-    result_move = await request.state.turtle_controller.move_absolute(
+async def move_turtle_service(request: Request, body: MoveBody) -> MoveResponse:
+    result = await request.state.turtle_controller.move_absolute(
         body.x, body.y, body.theta
     )
-
-    response.done = result_move
-    return response
+    return MoveResponse.model_validate(result)
