@@ -23,7 +23,7 @@ services:
     # Run the node directly: `ros2 run` exits on SIGTERM without forwarding it,
     # so the node was killed before leaving the ROS graph and stayed "available"
     # to other nodes until its ~20 s discovery lease expired.
-    command: /opt/ros/jazzy/lib/turtlesim/turtlesim_node
+    command: /opt/ros/lyrical/lib/turtlesim/turtlesim_node
     environment:
       # No display in the container, so turtlesim renders off-screen.
       QT_QPA_PLATFORM: offscreen

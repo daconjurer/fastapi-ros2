@@ -9,7 +9,7 @@ import rclpy
 from fastapi.testclient import TestClient
 from rclpy.executors import SingleThreadedExecutor
 from std_msgs.msg import String
-from turtlesim.srv import TeleportAbsolute
+from turtlesim_msgs.srv import TeleportAbsolute
 
 from fastapi_ros2.services.add_two_ints.server import AddTwoIntsService
 from main import app

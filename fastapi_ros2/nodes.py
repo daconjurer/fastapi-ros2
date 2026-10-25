@@ -25,13 +25,21 @@ async def ros_lifespan(app: FastAPI):
     spin_thread = threading.Thread(target=executor.spin, daemon=True)
     spin_thread.start()
 
+    controllers = {
+        "add_controller": AddTwoIntsController(node),
+        "turtle_controller": TurtleSimController(node),
+        "print_controller": PrintController(node),
+    }
+
     try:
         yield {
             "node": node,
             "spin_thread": spin_thread,
-            "add_controller": AddTwoIntsController(node),
-            "turtle_controller": TurtleSimController(node),
-            "print_controller": PrintController(node),
+            # Shutting rclpy down destroys the node and its clients, after which
+            # their names can no longer be read, so /health reads them from here.
+            "node_name": node.get_fully_qualified_name(),
+            "service_names": [client.service_name for client in node.clients],
+            **controllers,
         }
     finally:
         executor.shutdown()
