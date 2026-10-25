@@ -40,13 +40,15 @@ async def call_service(
     The timeout includes time spent waiting for an in-flight slot.
     """
     if not client.service_is_ready():
-        raise ServiceUnavailableError(f'Service "{client.srv_name}" is not available')
+        raise ServiceUnavailableError(
+            f'Service "{client.service_name}" is not available'
+        )
 
     try:
         return await asyncio.wait_for(_call(client, request), timeout_sec)
     except asyncio.TimeoutError:  # Not an alias of TimeoutError before Python 3.11.
         raise ServiceTimeoutError(
-            f'Service "{client.srv_name}" did not respond within {timeout_sec}s'
+            f'Service "{client.service_name}" did not respond within {timeout_sec}s'
         ) from None
 
 

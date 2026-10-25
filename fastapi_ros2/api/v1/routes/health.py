@@ -16,7 +16,7 @@ class NodeHealth(BaseModel):
 class HealthResponse(BaseModel):
     status: Literal["ok", "unavailable"]
     node: NodeHealth
-    # Every service the API's node has a client for, by resolved name.
+    # Every service the API's node has a client for, by fully qualified name.
     services: dict[str, bool]
 
 
@@ -31,8 +31,7 @@ async def health(request: Request, response: Response) -> HealthResponse:
         spinning=context_ok and request.state.spin_thread.is_alive(),
     )
     services = {
-        node.resolve_service_name(client.srv_name): context_ok
-        and client.service_is_ready()
+        client.service_name: context_ok and client.service_is_ready()
         for client in node.clients
     }
 
