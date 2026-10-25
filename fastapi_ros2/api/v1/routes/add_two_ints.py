@@ -32,13 +32,13 @@ class AddResponse(ros_model(AddTwoInts.Response)):  # type: ignore[misc]
     pass
 
 
+AddBody = Annotated[
+    AddRequest,
+    Body(openapi_examples={"sum": {"summary": "2 + 3", "value": {"a": 2, "b": 3}}}),
+]
+
+
 @router.post("/services/sum")
-async def sum_service(
-    request: Request,
-    body: Annotated[
-        AddRequest,
-        Body(openapi_examples={"sum": {"summary": "2 + 3", "value": {"a": 2, "b": 3}}}),
-    ],
-) -> AddResponse:
+async def sum_service(request: Request, body: AddBody) -> AddResponse:
     result = await request.state.add_controller.add_two_ints(body.a, body.b)
     return AddResponse.model_validate(result)

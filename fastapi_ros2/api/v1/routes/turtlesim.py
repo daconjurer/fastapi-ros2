@@ -19,21 +19,21 @@ class MoveResponse(ros_model(TeleportAbsolute.Response)):  # type: ignore[misc]
     pass
 
 
-@router.post("/services/move_turtle")
-async def move_turtle_service(
-    request: Request,
-    body: Annotated[
-        MoveRequest,
-        Body(
-            openapi_examples={
-                "pose": {
-                    "summary": "A pose inside the canvas",
-                    "value": {"x": 3.0, "y": 4.0, "theta": 1.5},
-                }
+MoveBody = Annotated[
+    MoveRequest,
+    Body(
+        openapi_examples={
+            "pose": {
+                "summary": "A pose inside the canvas",
+                "value": {"x": 3.0, "y": 4.0, "theta": 1.5},
             }
-        ),
-    ],
-) -> MoveResponse:
+        }
+    ),
+]
+
+
+@router.post("/services/move_turtle")
+async def move_turtle_service(request: Request, body: MoveBody) -> MoveResponse:
     result = await request.state.turtle_controller.move_absolute(
         body.x, body.y, body.theta
     )
