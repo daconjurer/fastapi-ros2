@@ -1,8 +1,9 @@
 #! /bin/bash
-echo "ruff check --diff fastapi_ros2/"
-ruff check --diff fastapi_ros2/
-echo "DONE!"
-echo "ruff format --diff fastapi_ros2/"
-ruff format --diff fastapi_ros2/
-echo "DONE!"
+set -e
+echo "ruff check --diff ."
+ruff check --diff .
+echo "ruff format --diff ."
+ruff format --diff .
+echo "pytest"
+pytest
 # mypy fastapi_ros2/

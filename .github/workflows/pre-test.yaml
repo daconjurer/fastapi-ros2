@@ -9,9 +9,10 @@ jobs:
     name: test
     runs-on: ubuntu-latest
     steps:
-      - 
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
-      -
-        name: Pre-test
-        uses: ./.github/actions/pre-test/
+      - name: Build the image
+        run: docker build -t fastapi-ros2 .
+      # The image only has the main dependencies; add the dev and test groups.
+      - name: Lint and test
+        run: docker run --rm fastapi-ros2 bash -c "poetry install --no-root --no-interaction && ./scripts/check.sh"
