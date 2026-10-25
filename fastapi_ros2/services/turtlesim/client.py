@@ -4,7 +4,7 @@ from loguru import logger
 
 import rclpy
 from rclpy.node import Node
-from turtlesim.srv import TeleportAbsolute
+from turtlesim_msgs.srv import TeleportAbsolute
 
 from fastapi_ros2.services.call import call_service
 

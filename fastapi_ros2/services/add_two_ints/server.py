@@ -1,3 +1,5 @@
+import signal
+
 from example_interfaces.srv import AddTwoInts  # type: ignore
 
 import rclpy  # type: ignore
@@ -36,10 +38,19 @@ class AddTwoIntsService(Node):
 
 
 def main():
+    # On SIGTERM (`docker compose stop`), Lyrical's rclpy shuts the context down
+    # but leaves `spin` blocked, so the node never leaves the ROS graph cleanly.
+    # Stop like on Ctrl+C instead: rclpy forwards the signal to this handler.
+    signal.signal(signal.SIGTERM, signal.default_int_handler)
     rclpy.init()
     minimal_service = AddTwoIntsService()
-    rclpy.spin(minimal_service)
-    rclpy.shutdown()
+    try:
+        rclpy.spin(minimal_service)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        minimal_service.destroy_node()
+        rclpy.try_shutdown()
 
 
 if __name__ == "__main__":

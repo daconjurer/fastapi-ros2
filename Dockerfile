@@ -1,7 +1,7 @@
-FROM ros:jazzy-ros-base
+FROM ros:lyrical-ros-base
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends python3-venv ros-jazzy-example-interfaces ros-jazzy-turtlesim \
+    && apt-get install -y --no-install-recommends python3-venv ros-lyrical-example-interfaces ros-lyrical-turtlesim \
     && rm -rf /var/lib/apt/lists/*
 
 # Poetry gets its own venv; the app venv sees the system site-packages so rclpy

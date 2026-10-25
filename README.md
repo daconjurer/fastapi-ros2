@@ -1,5 +1,5 @@
 # A FastAPI-based API for ROS2 applications
-The package assumes a [ROS2](https://docs.ros.org/en/iron/index.html) installation
+The package assumes a [ROS2](https://docs.ros.org/en/lyrical/index.html) installation
 that supports `pyproject.toml` files to specify the build system requirements
 and [Poetry](https://python-poetry.org/). The package can be placed in the `src`
 directory of a valid ROS2 workspace and built with
@@ -8,7 +8,7 @@ other package.
 
 ## Quick start with Docker
 
-Run the API, turtlesim, and the `add_two_ints` service on ROS 2 Jazzy with one command:
+Run the API, turtlesim, and the `add_two_ints` service on ROS 2 Lyrical with one command:
 
 ```
 docker compose up --build
@@ -19,7 +19,7 @@ If port 8000 is taken, pick another host port with `API_PORT=8001 docker compose
 Turtlesim runs headless in the container, so check the turtle's position with:
 
 ```
-docker compose exec turtlesim bash -c 'source /opt/ros/jazzy/setup.bash && ros2 topic echo --once /turtle1/pose'
+docker compose exec turtlesim bash -c 'source /opt/ros/lyrical/setup.bash && ros2 topic echo --once /turtle1/pose'
 ```
 
 ## Development
@@ -91,7 +91,7 @@ The current version of the API has the following endpoints available:
 These allow:
 - publishing to a topic `/print` a message of type `string`, using the `topics` route.
 - place a request to the service `example_interfaces.srv.AddTwoInts` to sum up two integers and get the result back.
-- place a request to the service `turtlesim.srv.TeleportAbsolute` to perform an absolute movement (position in cartesian x,y coordinates and angle in radians).
+- place a request to the service `turtlesim_msgs.srv.TeleportAbsolute` to perform an absolute movement (position in cartesian x,y coordinates and angle in radians).
 
 To start the app, run the following command from the package root directory:
 
