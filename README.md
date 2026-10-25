@@ -106,6 +106,8 @@ curl -X POST localhost:8000/services/move_turtle -H 'Content-Type: application/j
 
 Inputs are validated against the ROS message field types before they reach ROS: integers must fit in 64 bits (and so must their sum), and floats must be finite and fit in 32 bits.
 Invalid input returns `422`.
+Request and response bodies mirror the ROS service's request and response fields, so `/services/sum` returns `{"sum": 5}` and `/services/move_turtle` returns `{}`, since `TeleportAbsolute` responds with no fields.
+Their Pydantic models are derived from the ROS types with `ros_model()` in `fastapi_ros2/api/v1/models.py`.
 The endpoints await asynchronous clients for each of the ROS2 services, so a slow service does not block the rest of the API.
 The API starts whether or not the services are running.
 A call returns `503` if its service is not available and `504` if it does not respond within 5 seconds.
