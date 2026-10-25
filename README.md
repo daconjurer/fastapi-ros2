@@ -44,7 +44,7 @@ The dev container is a separate compose project, so it can run alongside `docker
 
 **Lint and tests.**
 `./scripts/check.sh` runs ruff and pytest, and CI runs it on every push.
-The tests replace the API's ROS node with fakes, so they need the ROS message packages but no running services.
+The tests run the API with its real ROS node and serve the ROS services from the test process, on a ROS domain of their own, so they need ROS installed but no running services.
 Run it in the dev container, or from the host with:
 
 ```

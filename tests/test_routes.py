@@ -1,20 +1,19 @@
-from example_interfaces.srv import AddTwoInts
 import pytest
+import rclpy
+from example_interfaces.srv import AddTwoInts
+from turtlesim.srv import TeleportAbsolute
 
 from fastapi_ros2.services.call import call_service
+from tests.conftest import api_client, wait_until
 
 INT64_MAX = 2**63 - 1
 
 
-def test_sum(api, node):
-    node.client("/add_two_ints").response = AddTwoInts.Response(sum=5)
-
+def test_sum(api, servers):
     response = api.post("/services/sum", json={"a": 2, "b": 3})
 
     assert response.status_code == 200
     assert response.json() == {"sum": 5}
-    [request] = node.client("/add_two_ints").requests
-    assert (request.a, request.b) == (2, 3)
 
 
 @pytest.mark.parametrize(
@@ -26,20 +25,19 @@ def test_sum(api, node):
         ({"a": 2}, "missing"),
     ],
 )
-def test_sum_rejects_invalid_input(api, node, body, error):
+def test_sum_rejects_invalid_input(api, body, error):
     response = api.post("/services/sum", json=body)
 
     assert response.status_code == 422
     assert response.json()["detail"][0]["type"] == error
-    assert node.client("/add_two_ints").requests == []
 
 
-def test_move_turtle(api, node):
+def test_move_turtle(api, servers):
     response = api.post("/services/move_turtle", json={"x": 3, "y": 4, "theta": 1.5})
 
     assert response.status_code == 200
     assert response.json() == {}
-    [request] = node.client("/turtle1/teleport_absolute").requests
+    [request] = servers.teleports
     assert (request.x, request.y, request.theta) == (3, 4, 1.5)
 
 
@@ -51,50 +49,50 @@ def test_move_turtle(api, node):
         (float("inf"), "finite_number"),
     ],
 )
-def test_move_turtle_rejects_invalid_input(api, node, x, error):
+def test_move_turtle_rejects_invalid_input(api, servers, x, error):
     # NaN and infinity are not valid JSON, but Python's encoder sends them anyway.
     response = api.post("/services/move_turtle", json={"x": x, "y": 4, "theta": 1.5})
 
     assert response.status_code == 422
     assert response.json()["detail"][0]["type"] == error
-    assert node.client("/turtle1/teleport_absolute").requests == []
+    assert servers.teleports == []
 
 
-def test_service_unavailable(api, node):
-    node.client("/add_two_ints").ready = False
-
+def test_service_unavailable(api):
     response = api.post("/services/sum", json={"a": 2, "b": 3})
 
     assert response.status_code == 503
     assert response.json() == {"detail": 'Service "/add_two_ints" is not available'}
 
 
-def test_service_timeout(api, node, monkeypatch):
-    node.client("/turtle1/teleport_absolute").response = None
+def test_service_timeout(api, servers, monkeypatch):
+    client = api_client(api, TeleportAbsolute)
+    servers.node.destroy_service(servers.teleport)
+    wait_until(lambda: not client.service_is_ready())
+    servers.unresponsive_node.create_service(
+        TeleportAbsolute, "/turtle1/teleport_absolute", lambda req, res: res
+    )
+    wait_until(client.service_is_ready)
     # Shorten the default timeout, which the clients rely on.
-    monkeypatch.setattr(call_service, "__defaults__", (0.01,))
+    monkeypatch.setattr(call_service, "__defaults__", (0.1,))
 
     response = api.post("/services/move_turtle", json={"x": 3, "y": 4, "theta": 1.5})
 
     assert response.status_code == 504
     assert response.json() == {
-        "detail": 'Service "/turtle1/teleport_absolute" did not respond within 0.01s'
+        "detail": 'Service "/turtle1/teleport_absolute" did not respond within 0.1s'
     }
 
 
-def test_print(api, node):
+def test_print(api, servers):
     assert api.post("/topics/print").json() == {"count": 1}
     assert api.post("/topics/print").json() == {"count": 2}
 
-    [publisher] = node.publishers
-    assert publisher.topic_name == "/print"
-    assert [msg.data for msg in publisher.published] == [
-        "Hello World: 0",
-        "Hello World: 1",
-    ]
+    wait_until(lambda: len(servers.prints) == 2)
+    assert servers.prints == ["Hello World: 0", "Hello World: 1"]
 
 
-def test_health(api):
+def test_health(api, servers):
     response = api.get("/health")
 
     assert response.status_code == 200
@@ -105,8 +103,10 @@ def test_health(api):
     }
 
 
-def test_health_with_a_service_down(api, node):
-    node.client("/add_two_ints").ready = False
+def test_health_with_a_service_down(api, servers):
+    client = api_client(api, AddTwoInts)
+    servers.add_two_ints.destroy_service(servers.add_two_ints.srv)
+    wait_until(lambda: not client.service_is_ready())
 
     response = api.get("/health")
 
@@ -118,8 +118,14 @@ def test_health_with_a_service_down(api, node):
     }
 
 
-def test_health_with_the_executor_stopped(api, spin_thread):
-    spin_thread.is_alive = lambda: False
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnhandledThreadExceptionWarning")
+def test_health_with_the_executor_stopped(api, servers):
+    def fail():
+        raise RuntimeError("A callback failed")
+
+    # An exception in any callback ends the executor's spin thread.
+    api.app_state["node"].create_timer(0.001, fail)
+    wait_until(lambda: not api.app_state["spin_thread"].is_alive())
 
     response = api.get("/health")
 
@@ -127,8 +133,10 @@ def test_health_with_the_executor_stopped(api, spin_thread):
     assert response.json()["node"]["spinning"] is False
 
 
-def test_health_after_rclpy_shutdown(api, node):
-    node.context.ok = lambda: False
+# Shutting rclpy down from outside ends every executor's spin thread with an error.
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnhandledThreadExceptionWarning")
+def test_health_after_rclpy_shutdown(api, servers):
+    rclpy.shutdown()
 
     response = api.get("/health")
 

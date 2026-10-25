@@ -1,100 +1,89 @@
+import os
+import random
 import threading
-from contextlib import asynccontextmanager
-from types import SimpleNamespace
+import time
+from collections.abc import Callable
 
 import pytest
+import rclpy
 from fastapi.testclient import TestClient
-from rclpy.qos import QoSProfile
-from rclpy.task import Future
+from rclpy.executors import SingleThreadedExecutor
+from std_msgs.msg import String
+from turtlesim.srv import TeleportAbsolute
 
-from fastapi_ros2.nodes import ros_state
+from fastapi_ros2.services.add_two_ints.server import AddTwoIntsService
 from main import app
 
+# Keep the tests' ROS graph to this machine and a domain of its own, so it never
+# meets a running compose stack (e.g. the real turtlesim). rclpy reads these when
+# the app's lifespan initializes it.
+os.environ["ROS_AUTOMATIC_DISCOVERY_RANGE"] = "LOCALHOST"
+os.environ.setdefault("ROS_DOMAIN_ID", str(random.randint(1, 101)))
 
-class FakeClient:
-    """An rclpy service client whose server answers every call with `response`.
 
-    Set `response` to None for a server that never answers, or to an exception
-    for a call that fails.
+def wait_until(condition: Callable[[], object], timeout: float = 2.0) -> None:
+    """Wait for the ROS graph to catch up, e.g. for a client to see its service."""
+    deadline = time.monotonic() + timeout
+    while not condition():
+        assert time.monotonic() < deadline, "Timed out waiting for the ROS graph"
+        time.sleep(0.001)
+
+
+def api_client(api: TestClient, srv_type):
+    """The API node's client for a service type."""
+    return next(c for c in api.app_state["node"].clients if c.srv_type is srv_type)
+
+
+class Servers:
+    """The ROS side the API talks to, run in the test process.
+
+    `add_two_ints` is the project's real server, the teleport server records its
+    requests, and a subscription records what is published to `/print`.
     """
 
-    def __init__(self, srv_type, srv_name: str, depth: int = 10):
-        self.service_name = "/" + srv_name.lstrip("/")
-        self.qos_profile = QoSProfile(depth=depth)
-        self.ready = True
-        self.response = srv_type.Response()
-        self.requests: list = []
-        self.removed: list[Future] = []
-
-    def service_is_ready(self) -> bool:
-        return self.ready
-
-    def call_async(self, request) -> Future:
-        self.requests.append(request)
-        future = Future()
-        if isinstance(self.response, Exception):
-            outcome = future.set_exception
-        else:
-            outcome = future.set_result
-        if self.response is not None:
-            # Like rclpy, complete the future on another thread than the event loop's.
-            threading.Thread(target=outcome, args=(self.response,)).start()
-        return future
-
-    def remove_pending_request(self, future: Future) -> None:
-        self.removed.append(future)
-
-
-class FakePublisher:
-    def __init__(self, topic: str):
-        self.topic_name = "/" + topic
-        self.published: list = []
-
-    def publish(self, msg) -> None:
-        self.published.append(msg)
-
-
-class FakeNode:
-    """The API's rclpy node, with fake clients and publishers."""
-
     def __init__(self):
-        self.context = SimpleNamespace(ok=lambda: True)
-        self.clients: list[FakeClient] = []
-        self.publishers: list[FakePublisher] = []
+        self.add_two_ints = AddTwoIntsService()
+        self.node = rclpy.create_node("test_servers")
+        self.teleport = self.node.create_service(
+            TeleportAbsolute, "/turtle1/teleport_absolute", self._teleport
+        )
+        self.teleports: list[TeleportAbsolute.Request] = []
+        self.prints: list[str] = []
+        self.node.create_subscription(
+            String, "/print", lambda msg: self.prints.append(msg.data), 10
+        )
+        # Services on this node receive requests but never answer: it never spins.
+        self.unresponsive_node = rclpy.create_node("test_unresponsive_servers")
 
-    def get_fully_qualified_name(self) -> str:
-        return "/fastapi_ros2"
+        self.executor = SingleThreadedExecutor()
+        self.executor.add_node(self.add_two_ints)
+        self.executor.add_node(self.node)
+        self.thread = threading.Thread(target=self.executor.spin, daemon=True)
+        self.thread.start()
 
-    def create_client(self, srv_type, srv_name: str) -> FakeClient:
-        self.clients.append(FakeClient(srv_type, srv_name))
-        return self.clients[-1]
+    def _teleport(self, request, response):
+        self.teleports.append(request)
+        return response
 
-    def create_publisher(self, msg_type, topic: str, qos_depth: int) -> FakePublisher:
-        self.publishers.append(FakePublisher(topic))
-        return self.publishers[-1]
-
-    def client(self, service_name: str) -> FakeClient:
-        return next(c for c in self.clients if c.service_name == service_name)
+    def shutdown(self) -> None:
+        self.executor.shutdown()
+        self.thread.join()
+        for node in (self.add_two_ints, self.node, self.unresponsive_node):
+            node.destroy_node()
 
 
 @pytest.fixture
-def node() -> FakeNode:
-    return FakeNode()
-
-
-@pytest.fixture
-def spin_thread() -> SimpleNamespace:
-    return SimpleNamespace(is_alive=lambda: True)
-
-
-@pytest.fixture
-def api(node, spin_thread, monkeypatch):
-    """A client for the app, running on the fake node instead of ROS."""
-
-    @asynccontextmanager
-    async def fake_lifespan(app):
-        yield ros_state(node, spin_thread)
-
-    monkeypatch.setattr(app.router, "lifespan_context", fake_lifespan)
+def api():
+    """A client for the app, running its real lifespan and ROS node."""
     with TestClient(app) as client:
         yield client
+
+
+@pytest.fixture
+def servers(api):
+    servers = Servers()
+    node = api.app_state["node"]
+    wait_until(lambda: all(client.service_is_ready() for client in node.clients))
+    wait_until(lambda: node.count_subscribers("/print") > 0)
+    yield servers
+    servers.shutdown()

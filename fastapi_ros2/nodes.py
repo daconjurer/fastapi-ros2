@@ -1,11 +1,9 @@
 from contextlib import asynccontextmanager
 import threading
-from typing import Any
 
 import rclpy
 from fastapi import FastAPI
 from rclpy.executors import MultiThreadedExecutor
-from rclpy.node import Node
 
 from fastapi_ros2.api.v1.controllers.add_two_ints import AddTwoIntsController
 from fastapi_ros2.api.v1.controllers.turtlesim import TurtleSimController
@@ -28,20 +26,15 @@ async def ros_lifespan(app: FastAPI):
     spin_thread.start()
 
     try:
-        yield ros_state(node, spin_thread)
+        yield {
+            "node": node,
+            "spin_thread": spin_thread,
+            "add_controller": AddTwoIntsController(node),
+            "turtle_controller": TurtleSimController(node),
+            "print_controller": PrintController(node),
+        }
     finally:
         executor.shutdown()
         spin_thread.join()
         node.destroy_node()
         rclpy.try_shutdown()
-
-
-def ros_state(node: Node, spin_thread: threading.Thread) -> dict[str, Any]:
-    """The state the routes read as `request.state.<name>`."""
-    return {
-        "node": node,
-        "spin_thread": spin_thread,
-        "add_controller": AddTwoIntsController(node),
-        "turtle_controller": TurtleSimController(node),
-        "print_controller": PrintController(node),
-    }
