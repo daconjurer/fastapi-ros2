@@ -1,3 +1,4 @@
+from example_interfaces.srv import AddTwoInts
 from loguru import logger
 from rclpy.node import Node
 
@@ -8,15 +9,14 @@ class AddTwoIntsController:
     def __init__(self, node: Node):
         self.client = AddTwoIntsClientAsync(node)
 
-    async def add_two_ints(self, a: int, b: int) -> int:
+    async def add_two_ints(self, a: int, b: int) -> AddTwoInts.Response:
         logger.info(
             f'Sending request to service "{self.client.name}" with params {a} and {b}'
         )
         server_response = await self.client.send_request(a, b)
-        result_sum = int(server_response.sum)
 
         logger.info(
             f'Response from service "{self.client.name}" '
-            f"to request with params {a} and {b}: {result_sum}"
+            f"to request with params {a} and {b}: {server_response.sum}"
         )
-        return result_sum
+        return server_response
