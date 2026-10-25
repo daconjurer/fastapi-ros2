@@ -144,3 +144,20 @@ The terminal should show the messages published to the topic:
 ![ROS topic echo](assets/ros_topic_echo.png)
 
 The same will apply for any topic added to the API through the `topics` route.
+
+### Health
+
+`GET /health` reports whether the API can talk to ROS:
+
+```
+curl localhost:8000/health
+```
+
+```json
+{"status": "ok", "node": {"name": "/fastapi_ros2", "spinning": true}, "services": {"/add_two_ints": true, "/turtle1/teleport_absolute": true}}
+```
+
+- `node.spinning`: the API's ROS node is processing callbacks; without it no service response or topic message arrives.
+- `services`: every service the API calls, and whether it is currently available.
+
+It returns `200` when everything is ready and `503` otherwise, with the same body.
