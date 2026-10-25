@@ -1,3 +1,6 @@
+from collections.abc import Sequence
+from typing import cast
+
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
@@ -26,23 +29,24 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
     except ValueError:
         # The default 422 echoes the invalid input, which cannot be encoded as
         # JSON when it is NaN or infinity; leave the input out in that case.
-        errors = [{k: v for k, v in e.items() if k != "input"} for e in exc.errors()]
+        details = cast(Sequence[dict[str, object]], exc.errors())
+        errors = [{k: v for k, v in e.items() if k != "input"} for e in details]
         return JSONResponse(
             status_code=422, content={"detail": jsonable_encoder(errors)}
         )
 
 
 @app.exception_handler(ServiceUnavailableError)
-async def service_unavailable_handler(request: Request, exc: ServiceUnavailableError):
+async def service_unavailable_handler(_request: Request, exc: ServiceUnavailableError):
     return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 
 @app.exception_handler(ServiceTimeoutError)
-async def service_timeout_handler(request: Request, exc: ServiceTimeoutError):
+async def service_timeout_handler(_request: Request, exc: ServiceTimeoutError):
     return JSONResponse(status_code=504, content={"detail": str(exc)})
 
 
-def main(args=None):
+def main():
     uvicorn.run(app, port=8000, log_level="warning")
 
 

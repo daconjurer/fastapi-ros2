@@ -1,3 +1,4 @@
+from typing import final
 import threading
 
 import rclpy
@@ -16,6 +17,7 @@ class PrintResponse(BaseModel):
     msg: str
 
 
+@final
 class PrintPublisher(Node):
     def __init__(self):
         super().__init__("print_publisher")
@@ -41,7 +43,7 @@ class PrintPublisher(Node):
             return response
 
 
-def main(args=None):
+def main():
     rclpy.init()
     print_publisher = PrintPublisher()
     spin_thread = threading.Thread(target=rclpy.spin, args=(print_publisher,))

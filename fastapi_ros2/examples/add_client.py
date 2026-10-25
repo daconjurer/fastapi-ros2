@@ -1,6 +1,8 @@
+from typing import final
 import threading
 
 import rclpy
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 
 import uvicorn
@@ -17,6 +19,7 @@ class SumResponse(BaseModel):
     sum: int
 
 
+@final
 class SumClient(Node):
     def __init__(self):
         super().__init__("int_sum_service")
@@ -40,10 +43,10 @@ class SumClient(Node):
             return response
 
 
-def main(args=None):
+def main():
     rclpy.init()
     sum_server = SumClient()
-    executor = rclpy.executors.MultiThreadedExecutor()
+    executor = MultiThreadedExecutor()
     executor.add_node(sum_server)
     spin_thread = threading.Thread(target=executor.spin, daemon=True)
     spin_thread.start()

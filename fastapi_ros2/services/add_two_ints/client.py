@@ -1,3 +1,4 @@
+from typing import final
 import sys
 
 from loguru import logger
@@ -9,6 +10,7 @@ from example_interfaces.srv import AddTwoInts
 from fastapi_ros2.services.call import call_service
 
 
+@final
 class AddTwoIntsClientAsync:
     def __init__(self, node: Node):
         self.client_ = node.create_client(AddTwoInts, "add_two_ints")
@@ -32,6 +34,7 @@ def main():
     )
     rclpy.spin_until_future_complete(node, future)
     response = future.result()
+    assert response is not None, "spin_until_future_complete waits for the result"
     logger.info(
         f"Result of add_two_ints: for {int(sys.argv[1])} + {int(sys.argv[2])} = {response.sum}"
     )
