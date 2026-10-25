@@ -6,14 +6,16 @@
 	"runServices": ["dev", "turtlesim", "add_two_ints"],
 	"workspaceFolder": "/app",
 	"shutdownAction": "stopCompose",
-	// The image only has the main dependencies; add the dev and test groups (ruff, mypy, pytest).
+	// The image only has the main dependencies; add the dev and test groups (ruff, basedpyright, pytest).
 	"postCreateCommand": "poetry install --no-root --no-interaction",
 	"customizations": {
 		"vscode": {
 			"settings": {
-				"python.defaultInterpreterPath": "/opt/venv/bin/python"
+				"python.defaultInterpreterPath": "/opt/venv/bin/python",
+				// basedpyright replaces Pylance, so the editor shows what the check reports.
+				"python.languageServer": "None"
 			},
-			"extensions": ["ms-python.python", "charliermarsh.ruff"]
+			"extensions": ["ms-python.python", "charliermarsh.ruff", "detachhead.basedpyright"]
 		}
 	}
 }

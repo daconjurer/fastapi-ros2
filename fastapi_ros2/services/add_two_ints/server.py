@@ -1,9 +1,10 @@
+from typing import final
 import signal
 
-from example_interfaces.srv import AddTwoInts  # type: ignore
+from example_interfaces.srv import AddTwoInts
 
-import rclpy  # type: ignore
-from rclpy.node import Node  # type: ignore
+import rclpy
+from rclpy.node import Node
 
 
 def wrap_int64(value: int) -> int:
@@ -19,6 +20,7 @@ def wrap_int64(value: int) -> int:
     return (value + 2**63) % 2**64 - 2**63
 
 
+@final
 class AddTwoIntsService(Node):
     def __init__(self):
         super().__init__("add_two_ints_service")
@@ -26,7 +28,9 @@ class AddTwoIntsService(Node):
             AddTwoInts, "add_two_ints", self.add_two_ints_callback
         )
 
-    def add_two_ints_callback(self, request, response):
+    def add_two_ints_callback(
+        self, request: AddTwoInts.Request, response: AddTwoInts.Response
+    ) -> AddTwoInts.Response:
         self.get_logger().info(f"Incoming request: a = {request.a}, b = {request.b}")
         # `sum` is an int64, and an out-of-range value fails to serialize and stops
         # the server. Wrap around instead, like ROS's C++ demo server

@@ -2,15 +2,18 @@ import os
 import random
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from typing import Any, cast, final
 
 import pytest
 import rclpy
 from fastapi.testclient import TestClient
+from rclpy.client import Client
 from rclpy.executors import SingleThreadedExecutor
 from std_msgs.msg import String
 from turtlesim_msgs.srv import TeleportAbsolute
 
+from fastapi_ros2.nodes import RosState
 from fastapi_ros2.services.add_two_ints.server import AddTwoIntsService
 from main import app
 
@@ -29,11 +32,17 @@ def wait_until(condition: Callable[[], object], timeout: float = 2.0) -> None:
         time.sleep(0.001)
 
 
-def api_client(api: TestClient, srv_type):
+def ros_state(api: TestClient) -> RosState:
+    """The API's ROS node and controllers, as its lifespan created them."""
+    return cast(RosState, api.app_state["ros"])
+
+
+def api_client(api: TestClient, srv_type: type) -> Client[Any, Any]:  # pyright: ignore[reportExplicitAny]
     """The API node's client for a service type."""
-    return next(c for c in api.app_state["node"].clients if c.srv_type is srv_type)
+    return next(c for c in ros_state(api).node.clients if c.srv_type is srv_type)
 
 
+@final
 class Servers:
     """The ROS side the API talks to, run in the test process.
 
@@ -61,7 +70,9 @@ class Servers:
         self.thread = threading.Thread(target=self.executor.spin, daemon=True)
         self.thread.start()
 
-    def _teleport(self, request, response):
+    def _teleport(
+        self, request: TeleportAbsolute.Request, response: TeleportAbsolute.Response
+    ) -> TeleportAbsolute.Response:
         self.teleports.append(request)
         return response
 
@@ -73,16 +84,16 @@ class Servers:
 
 
 @pytest.fixture
-def api():
+def api() -> Iterator[TestClient]:
     """A client for the app, running its real lifespan and ROS node."""
     with TestClient(app) as client:
         yield client
 
 
 @pytest.fixture
-def servers(api):
+def servers(api: TestClient) -> Iterator[Servers]:
     servers = Servers()
-    node = api.app_state["node"]
+    node = ros_state(api).node
     wait_until(lambda: all(client.service_is_ready() for client in node.clients))
     wait_until(lambda: node.count_subscribers("/print") > 0)
     yield servers

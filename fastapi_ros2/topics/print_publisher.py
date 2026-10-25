@@ -1,3 +1,4 @@
+from typing import final
 from loguru import logger
 
 import rclpy
@@ -5,6 +6,7 @@ from rclpy.node import Node
 from std_msgs.msg import String
 
 
+@final
 class PrintPublisher:
     def __init__(self, node: Node):
         self.publisher_ = node.create_publisher(String, "print", 10)

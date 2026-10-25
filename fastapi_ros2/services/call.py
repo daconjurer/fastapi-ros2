@@ -1,6 +1,6 @@
 import asyncio
 import weakref
-from typing import Any
+from typing import Any, cast
 
 from rclpy.client import Client
 from rclpy.task import Future
@@ -19,7 +19,10 @@ class ServiceTimeoutError(Exception):
 # middleware, so each client only gets that many calls in flight; the rest wait.
 # ponytail: burst protection for this process only, not added capacity; replicas
 # each get their own limit, so raise the server's QoS depth if the API scales out.
-_in_flight: weakref.WeakKeyDictionary[Client[Any, Any], asyncio.Semaphore] = (
+# Clients of every service type share the dict. rclpy's `Client` is invariant in its
+# request and response types, so only `Any` accepts them all.
+type _AnyClient = Client[Any, Any]  # pyright: ignore[reportExplicitAny]
+_in_flight: weakref.WeakKeyDictionary[_AnyClient, asyncio.Semaphore] = (
     weakref.WeakKeyDictionary()
 )
 
@@ -57,10 +60,11 @@ async def _call(
         loop = asyncio.get_running_loop()
         result: asyncio.Future[SrvResponseT] = loop.create_future()
 
+        def on_done(done: Future[SrvResponseT]) -> None:
+            loop.call_soon_threadsafe(_transfer, done, result)
+
         ros_future = client.call_async(request)
-        ros_future.add_done_callback(
-            lambda f: loop.call_soon_threadsafe(_transfer, f, result)
-        )
+        ros_future.add_done_callback(on_done)
         try:
             return await result
         finally:
@@ -80,7 +84,10 @@ def _transfer(
     """
     if result.done():
         return
-    if ros_future.exception() is not None:
-        result.set_exception(ros_future.exception())
+    exception = ros_future.exception()
+    if exception is not None:
+        result.set_exception(exception)
     else:
-        result.set_result(ros_future.result())
+        # rclpy types the result as optional, but a future done without an
+        # exception has one.
+        result.set_result(cast(SrvResponseT, ros_future.result()))
