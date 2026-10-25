@@ -1,7 +1,9 @@
+import json
+
 import pytest
 import rclpy
 from example_interfaces.srv import AddTwoInts
-from turtlesim.srv import TeleportAbsolute
+from turtlesim_msgs.srv import TeleportAbsolute
 
 from fastapi_ros2.services.call import call_service
 from tests.conftest import api_client, wait_until
@@ -50,8 +52,13 @@ def test_move_turtle(api, servers):
     ],
 )
 def test_move_turtle_rejects_invalid_input(api, servers, x, error):
-    # NaN and infinity are not valid JSON, but Python's encoder sends them anyway.
-    response = api.post("/services/move_turtle", json={"x": x, "y": 4, "theta": 1.5})
+    # NaN and infinity are not valid JSON, but clients send them anyway. httpx
+    # refuses to encode them, so encode the body with Python's json module.
+    response = api.post(
+        "/services/move_turtle",
+        content=json.dumps({"x": x, "y": 4, "theta": 1.5}),
+        headers={"Content-Type": "application/json"},
+    )
 
     assert response.status_code == 422
     assert response.json()["detail"][0]["type"] == error

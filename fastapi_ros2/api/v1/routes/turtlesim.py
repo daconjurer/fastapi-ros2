@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Request
-from turtlesim.srv import TeleportAbsolute
+from turtlesim_msgs.srv import TeleportAbsolute
 
 from fastapi_ros2.api.v1.models import SERVICE_ERRORS, ros_model
 

@@ -1,6 +1,6 @@
 from loguru import logger
 from rclpy.node import Node
-from turtlesim.srv import TeleportAbsolute
+from turtlesim_msgs.srv import TeleportAbsolute
 
 from fastapi_ros2.services.turtlesim.client import TurtlesimMoveClientAsync
 
