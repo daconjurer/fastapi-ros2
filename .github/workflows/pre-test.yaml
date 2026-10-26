@@ -8,11 +8,23 @@ jobs:
   test:
     name: test
     runs-on: ubuntu-latest
+    # A generic ROS 2 Lyrical image with Poetry, pinned so that rebuilding it
+    # never changes CI without a commit here.
+    container: ghcr.io/daconjurer/ros2-for-ci:lyrical-82e7dc470d402cb330ea01caaaac88c90cbfda9f
+    # Actions ignores the image's entrypoint, so have every bash step source ROS.
+    env:
+      BASH_ENV: /opt/ros/lyrical/setup.bash
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Build the image
-        run: docker build -t fastapi-ros2 .
-      # The image only has the main dependencies; add the dev and test groups.
+      - name: Install ROS packages
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ros-lyrical-example-interfaces ros-lyrical-turtlesim
+      - name: Install Python dependencies
+        run: poetry install --no-root --no-interaction
       - name: Lint and test
-        run: docker run --rm fastapi-ros2 bash -c "poetry install --no-root --no-interaction && ./scripts/check.sh"
+        run: ./scripts/check.sh
