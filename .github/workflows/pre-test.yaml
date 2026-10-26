@@ -11,10 +11,12 @@ jobs:
     # A generic ROS 2 Lyrical image with Poetry, pinned so that rebuilding it
     # never changes CI without a commit here.
     container: ghcr.io/daconjurer/ros2-for-ci:lyrical-82e7dc470d402cb330ea01caaaac88c90cbfda9f
+    # Actions ignores the image's entrypoint, so have every bash step source ROS.
+    env:
+      BASH_ENV: /opt/ros/lyrical/setup.bash
     defaults:
       run:
-        # Actions ignores the image's entrypoint, so source ROS through the shell.
-        shell: /ros_entrypoint.sh bash -e {0}
+        shell: bash
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
