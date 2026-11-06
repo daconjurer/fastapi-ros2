@@ -14,7 +14,7 @@ x-develop: &develop
       action: sync+restart
     - path: ./pyproject.toml
       action: rebuild
-    - path: ./poetry.lock
+    - path: ./uv.lock
       action: rebuild
 
 services:

@@ -7,7 +7,7 @@
 	"workspaceFolder": "/app",
 	"shutdownAction": "stopCompose",
 	// The image only has the main dependencies; add the dev and test groups (ruff, basedpyright, pytest).
-	"postCreateCommand": "poetry install --no-root --no-interaction",
+	"postCreateCommand": "uv sync --locked",
 	"customizations": {
 		"vscode": {
 			"settings": {

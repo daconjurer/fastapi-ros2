@@ -1,10 +1,7 @@
 # A FastAPI-based API for ROS2 applications
-The package assumes a [ROS2](https://docs.ros.org/en/lyrical/index.html) installation
-that supports `pyproject.toml` files to specify the build system requirements
-and [Poetry](https://python-poetry.org/). The package can be placed in the `src`
-directory of a valid ROS2 workspace and built with
-[colcon](https://colcon.readthedocs.io/en/released/index.html#) just like any
-other package.
+A FastAPI app that talks to [ROS 2 Lyrical](https://docs.ros.org/en/lyrical/index.html) through rclpy.
+It is a plain Python app, run from source and managed with [uv](https://docs.astral.sh/uv/), not a colcon-built ROS package.
+rclpy and the ROS message packages it uses come from the ROS installation, which the app's venv sees through `--system-site-packages`.
 
 ## Quick start with Docker
 
@@ -29,7 +26,7 @@ There are two Docker-based workflows, both on the same image as the quick start.
 **Any editor, with `docker compose watch`.**
 Run `docker compose watch` and edit on the host.
 Saving a file under `fastapi_ros2/` or `main.py` syncs it into the containers and restarts the `api` and `add_two_ints` services.
-Changing `pyproject.toml` or `poetry.lock` rebuilds the image.
+Changing `pyproject.toml` or `uv.lock` rebuilds the image.
 
 **Dev container.**
 Open the repo in VS Code (or another client that supports dev containers) and reopen it in the container.
@@ -49,39 +46,21 @@ The tests run the API with its real ROS node and serve the ROS services from the
 Run it in the dev container, or from the host with:
 
 ```
-docker compose build api && docker compose run --rm --no-deps api bash -c "poetry install --no-root && ./scripts/check.sh"
+docker compose build api && docker compose run --rm --no-deps api bash -c "uv sync --locked && ./scripts/check.sh"
 ```
 
-## Installation
-
-The package can be installed with colcon using
-[`colcon-poetry-ros`](https://github.com/UrbanMachine/colcon-poetry-ros) to provide
-`Poetry` support to `colcon`, from the workspace folder:
+**Without Docker.**
+With ROS 2 Lyrical installed and sourced, create a venv on the system Python that sees the ROS packages, then install the dependencies:
 
 ```
-colcon build --packages-select fastapi_ros2
+uv venv --system-site-packages --python /usr/bin/python3
+uv sync --locked
 ```
 
-Once the overlay has been sourced, the package can be used as a normal ROS2 package,
-with the caveat that the scripts are not enabled for the `ros2 run` command.
-They can however be run with Python directly from the workspace's `install` folder.
-
-## Running the nodes
-
-For the simple publisher node:
-```
-python3 install/fastapi_ros2/lib/fastapi_ros2/print_publisher
-```
-
-For the service node:
-```
-python3 install/fastapi_ros2/lib/fastapi_ros2/service
-```
-
-## Alternative: running the Python modules
+Then run any of the nodes as a module, for example the publisher example:
 
 ```
-poetry run python -m fastapi_ros2.examples.print_publisher
+uv run python -m fastapi_ros2.examples.print_publisher
 ```
 
 ## Starting the API with `topics` and `services` routes
@@ -97,7 +76,7 @@ These allow:
 To start the app, run the following command from the package root directory:
 
 ```
-poetry run uvicorn main:app
+uv run uvicorn main:app
 ```
 
 ![Alt text](assets/startup.png)
@@ -126,12 +105,10 @@ The services live in the `services` module of the package, where any new service
 
 From the package location, start the `add_two_ints` service:
 ```
-poetry run python3 /workspace_dir/install/fastapi_ros2/lib/fastapi_ros2/service
+uv run python -m fastapi_ros2.services.add_two_ints.server
 ```
 
-**NOTE:** This command can only be run after installing the packages in the ROS2 workspace, so that the scripts become available (`ros2 run` equivalent).
-
-From the package location, start the `turtlesim` service:
+Start the `turtlesim` service:
 
 ```
 ros2 run turtlesim turtlesim_node
