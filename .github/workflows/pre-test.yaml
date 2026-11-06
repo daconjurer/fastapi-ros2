@@ -8,9 +8,9 @@ jobs:
   test:
     name: test
     runs-on: ubuntu-latest
-    # A generic ROS 2 Lyrical image with Poetry, pinned so that rebuilding it
-    # never changes CI without a commit here.
-    container: ghcr.io/daconjurer/ros2-for-ci:lyrical-82e7dc470d402cb330ea01caaaac88c90cbfda9f
+    # A generic ROS 2 Lyrical image with uv and a venv at /opt/venv that sees the
+    # system site-packages, pinned so that rebuilding it never changes CI without a commit here.
+    container: ghcr.io/daconjurer/ros2-for-ci:lyrical-54b53243b5165bf7af6953d182b9bc1ceb3acb3f
     # Actions ignores the image's entrypoint, so have every bash step source ROS.
     env:
       BASH_ENV: /opt/ros/lyrical/setup.bash
@@ -25,6 +25,6 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends ros-lyrical-example-interfaces ros-lyrical-turtlesim
       - name: Install Python dependencies
-        run: poetry install --no-root --no-interaction
+        run: uv sync --locked
       - name: Lint and test
         run: ./scripts/check.sh
