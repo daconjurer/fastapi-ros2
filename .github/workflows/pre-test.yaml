@@ -8,9 +8,9 @@ jobs:
   test:
     name: test
     runs-on: ubuntu-latest
-    # A generic ROS 2 Lyrical image with uv and a venv at /opt/venv that sees the
+    # A generic ROS 2 Lyrical image with uv, just, and a venv at /opt/venv that sees the
     # system site-packages, pinned so that rebuilding it never changes CI without a commit here.
-    container: ghcr.io/daconjurer/ros2-for-ci:lyrical-54b53243b5165bf7af6953d182b9bc1ceb3acb3f
+    container: ghcr.io/daconjurer/ros2-for-ci:lyrical-b20e21592fdb4948082a5dd03a627cca9fe2ebf3
     # Actions ignores the image's entrypoint, so have every bash step source ROS.
     env:
       BASH_ENV: /opt/ros/lyrical/setup.bash
@@ -27,4 +27,4 @@ jobs:
       - name: Install Python dependencies
         run: uv sync --locked
       - name: Lint and test
-        run: ./scripts/check.sh
+        run: just check

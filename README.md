@@ -42,13 +42,14 @@ If the API stops itself because a ROS callback failed (see [Health](#health)), t
 The dev container is a separate compose project, so it can run alongside `docker compose up`, as long as they use different `API_PORT` values.
 
 **Lint and tests.**
-`./scripts/check.sh` runs ruff, basedpyright, and pytest, and CI runs it on every push.
+The [`justfile`](justfile) has the recipes, and `just check` runs ruff, basedpyright, and pytest without changing any file, as CI does on every push.
+`just lint` and `just format` fix and format in place.
 basedpyright runs in its `recommended` mode, so warnings fail the check too.
 The tests run the API with its real ROS node and serve the ROS services from the test process, on a ROS domain of their own, so they need ROS installed but no running services.
-Run it in the dev container, or from the host with:
+Run it in the dev container, or from a host with [just](https://just.systems) installed:
 
 ```
-docker compose build api && docker compose run --rm --no-deps api bash -c "uv sync --locked && ./scripts/check.sh"
+just check-in-docker
 ```
 
 **Without Docker.**

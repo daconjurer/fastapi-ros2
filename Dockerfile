@@ -1,6 +1,7 @@
 FROM ros:lyrical-ros-base
 
 COPY --from=ghcr.io/astral-sh/uv:0.11.21 /uv /uvx /usr/local/bin/
+COPY --from=ghcr.io/casey/just:1.59.0 /just /usr/local/bin/
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ros-lyrical-example-interfaces ros-lyrical-turtlesim \
