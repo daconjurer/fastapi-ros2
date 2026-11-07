@@ -1,4 +1,6 @@
 import json
+import os
+import signal
 
 import pytest
 import rclpy
@@ -134,9 +136,17 @@ def test_health_with_a_service_down(api: TestClient, servers: Servers):
     }
 
 
-@pytest.mark.filterwarnings("ignore::pytest.PytestUnhandledThreadExceptionWarning")
 @pytest.mark.usefixtures("servers")
-def test_health_with_the_executor_stopped(api: TestClient):
+def test_a_failed_callback_stops_the_api(
+    api: TestClient, monkeypatch: pytest.MonkeyPatch
+):
+    signals: list[tuple[int, int]] = []
+
+    def kill(pid: int, sig: int) -> None:
+        signals.append((pid, sig))
+
+    monkeypatch.setattr(os, "kill", kill)
+
     def fail() -> None:
         raise RuntimeError("A callback failed")
 
@@ -144,8 +154,10 @@ def test_health_with_the_executor_stopped(api: TestClient):
     ros_state(api).node.create_timer(0.001, fail)
     wait_until(lambda: not ros_state(api).spin_thread.is_alive())
 
+    # The API stops itself, as on `docker compose stop`, so Docker restarts it.
+    assert signals == [(os.getpid(), signal.SIGTERM)]
+    # Until it has stopped, /health reports it.
     response = api.get("/health")
-
     assert response.status_code == 503
     assert response.json()["node"]["spinning"] is False
 
