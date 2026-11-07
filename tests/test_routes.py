@@ -150,8 +150,8 @@ def test_health_with_the_executor_stopped(api: TestClient):
     assert response.json()["node"]["spinning"] is False
 
 
-# Shutting rclpy down from outside ends every executor's spin thread with an error.
-@pytest.mark.filterwarnings("ignore::pytest.PytestUnhandledThreadExceptionWarning")
+# Shutting rclpy down from outside, as its SIGINT/SIGTERM handler does, ends
+# every executor's spin.
 @pytest.mark.usefixtures("servers")
 def test_health_after_rclpy_shutdown(api: TestClient):
     rclpy.shutdown()
