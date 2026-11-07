@@ -37,6 +37,8 @@ Start the API yourself from a terminal in the container, so you can use reload a
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
+If the API stops itself because a ROS callback failed (see [Health](#health)), the reloader keeps running without a server until the next file change, so save a file or restart uvicorn.
+
 The dev container is a separate compose project, so it can run alongside `docker compose up`, as long as they use different `API_PORT` values.
 
 **Lint and tests.**
@@ -150,3 +152,8 @@ curl localhost:8000/health
 - `services`: every service the API calls, and whether it is currently available.
 
 It returns `200` when everything is ready and `503` otherwise, with the same body.
+
+If a ROS callback in the API raises, its node stops spinning for good, so the API logs the error and shuts itself down.
+Docker Compose restarts it (`restart: unless-stopped`), so it recovers in about a second; a manual `docker compose stop` or `down` does not trigger a restart.
+Compose also runs `/health` as the `api` service's healthcheck, so `docker compose ps` shows whether the API is ready, and `docker compose up -d --wait` returns once it is.
+Run outside Docker, the process just exits.

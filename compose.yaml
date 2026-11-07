@@ -36,6 +36,19 @@ services:
   api:
     <<: *ros
     command: uvicorn main:app --host 0.0.0.0 --port 8000
+    # The API exits when its ROS executor dies; start it again. A manual
+    # `docker compose stop` or `down` does not trigger a restart.
+    restart: unless-stopped
+    # Ready: the node spins and every service the API calls is available (see
+    # /health). The image has no curl. Checks run every second until the first
+    # pass, so `docker compose up -d --wait` returns once the API can serve.
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+      start_interval: 1s
     ports:
       - "127.0.0.1:${API_PORT:-8000}:8000"
     depends_on:

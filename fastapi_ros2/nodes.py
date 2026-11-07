@@ -1,11 +1,14 @@
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Annotated, cast, final
+import os
+import signal
 import threading
 
 import rclpy
 from fastapi import Depends, FastAPI, Request
+from loguru import logger
 from rclpy.executors import ExternalShutdownException, SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.task import Future
@@ -26,11 +29,17 @@ class Spinner:
     on that thread, so once it has joined, none is running.
     """
 
-    def __init__(self, executor: SingleThreadedExecutor):
+    def __init__(
+        self,
+        executor: SingleThreadedExecutor,
+        on_crash: Callable[[Exception], None] | None = None,
+    ):
         self.executor = executor
+        # An exception in a callback ends the spin. `on_crash` gets it, if given;
+        # otherwise it ends the thread as an unhandled exception.
+        self._on_crash = on_crash
         # Completing this future wakes the executor and ends the spin.
         self._stopped: Future[None] = Future()
-        # An exception in a callback ends the thread, which /health reports.
         self.thread = threading.Thread(target=self._spin, daemon=True)
         self.thread.start()
 
@@ -40,11 +49,27 @@ class Spinner:
         except ExternalShutdownException:
             # rclpy was shut down from outside, e.g. by its SIGINT/SIGTERM handler.
             pass
+        except Exception as error:
+            if self._on_crash is None:
+                raise
+            self._on_crash(error)
 
     def stop(self) -> None:
         self._stopped.set_result(None)
         self.thread.join()
         self.executor.shutdown()
+
+
+def _stop_on_crash(error: Exception) -> None:
+    """Stop the API when its executor dies, so that Docker restarts it.
+
+    Without the executor no ROS response or message ever arrives again. SIGTERM
+    runs the same graceful shutdown as `docker compose stop`.
+    """
+    logger.opt(exception=error).critical(
+        "The ROS executor stopped after a callback failed; stopping the API"
+    )
+    os.kill(os.getpid(), signal.SIGTERM)
 
 
 @dataclass(frozen=True)
@@ -74,7 +99,7 @@ async def ros_lifespan(_app: FastAPI) -> AsyncGenerator[dict[str, RosState]]:
 
     executor = SingleThreadedExecutor()
     executor.add_node(node)
-    spinner = Spinner(executor)
+    spinner = Spinner(executor, on_crash=_stop_on_crash)
 
     add_controller = AddTwoIntsController(node)
     turtle_controller = TurtleSimController(node)
