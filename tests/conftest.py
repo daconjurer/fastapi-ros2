@@ -1,6 +1,5 @@
 import os
 import random
-import threading
 import time
 from collections.abc import Callable, Iterator
 from typing import Any, cast, final
@@ -13,7 +12,7 @@ from rclpy.executors import SingleThreadedExecutor
 from std_msgs.msg import String
 from turtlesim_msgs.srv import TeleportAbsolute
 
-from fastapi_ros2.nodes import RosState
+from fastapi_ros2.nodes import RosState, Spinner
 from fastapi_ros2.services.add_two_ints.server import AddTwoIntsService
 from main import app
 
@@ -64,11 +63,10 @@ class Servers:
         # Services on this node receive requests but never answer: it never spins.
         self.unresponsive_node = rclpy.create_node("test_unresponsive_servers")
 
-        self.executor = SingleThreadedExecutor()
-        self.executor.add_node(self.add_two_ints)
-        self.executor.add_node(self.node)
-        self.thread = threading.Thread(target=self.executor.spin, daemon=True)
-        self.thread.start()
+        executor = SingleThreadedExecutor()
+        executor.add_node(self.add_two_ints)
+        executor.add_node(self.node)
+        self.spinner = Spinner(executor)
 
     def _teleport(
         self, request: TeleportAbsolute.Request, response: TeleportAbsolute.Response
@@ -77,8 +75,7 @@ class Servers:
         return response
 
     def shutdown(self) -> None:
-        self.executor.shutdown()
-        self.thread.join()
+        self.spinner.stop()
         for node in (self.add_two_ints, self.node, self.unresponsive_node):
             node.destroy_node()
 
