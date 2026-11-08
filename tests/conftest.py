@@ -9,6 +9,7 @@ import rclpy
 from fastapi.testclient import TestClient
 from rclpy.action import ActionServer
 from rclpy.action.server import ServerGoalHandle
+from rcl_interfaces.msg import IntegerRange, ParameterDescriptor
 from rclpy.client import Client
 from rclpy.executors import SingleThreadedExecutor
 from std_msgs.msg import String
@@ -49,8 +50,8 @@ class Servers:
     """The ROS side the API talks to, run in the test process.
 
     `add_two_ints` is the project's real server, the teleport server records its
-    requests, a subscription records what is published to `/print`, and the
-    rotate action server succeeds at once.
+    requests, a subscription records what is published to `/print`, the rotate
+    action server succeeds at once, and the node has parameters like turtlesim's.
     """
 
     def __init__(self):
@@ -64,6 +65,14 @@ class Servers:
         self.node.create_subscription(
             String, "/print", lambda msg: self.prints.append(msg.data), 10
         )
+        red = ParameterDescriptor(
+            integer_range=[IntegerRange(from_value=0, to_value=255, step=1)]
+        )
+        self.node.declare_parameter("background_r", 69, red)
+        self.node.declare_parameter("scale", 1.0)
+        self.node.declare_parameter("names", ["a"])
+        self.node.declare_parameter("ids", [1, 2])
+        self.node.declare_parameter("weights", [0.5])
         self.rotate = ActionServer(
             self.node, RotateAbsolute, "/turtle1/rotate_absolute", self._rotate
         )

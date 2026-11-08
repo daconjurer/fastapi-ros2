@@ -1,6 +1,8 @@
+from array import array
 import json
 import os
 import signal
+from typing import cast
 
 import pytest
 import rclpy
@@ -206,3 +208,109 @@ def test_graph(api: TestClient):
     }
     # The topics and services the action is built on are hidden.
     assert [n for n in [*body.topics, *body.services] if "/_action/" in n] == []
+
+
+@pytest.mark.usefixtures("servers")
+def test_get_parameter(api: TestClient):
+    response = api.get("/nodes/test_servers/parameters/background_r")
+
+    assert response.status_code == 200
+    assert response.json() == {"name": "background_r", "value": 69}
+
+
+@pytest.mark.usefixtures("servers")
+@pytest.mark.parametrize(
+    "path, detail",
+    [
+        ("/nodes/nowhere/parameters/x", 'Node "/nowhere" is not in the ROS graph'),
+        (
+            "/nodes/test_servers/parameters/nothing",
+            'Node "/test_servers" has no parameter "nothing"',
+        ),
+    ],
+)
+def test_parameter_not_found(api: TestClient, path: str, detail: str):
+    assert api.get(path).status_code == 404
+    response = api.put(path, json={"value": 1})
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": detail}
+
+
+@pytest.mark.parametrize(
+    "name, value, stored",
+    [
+        ("background_r", 255, 255),
+        # JSON clients send whole doubles as integers.
+        ("scale", 2, 2.0),
+        ("names", ["b", "c"], ["b", "c"]),
+        ("names", [], []),
+        ("ids", [4, 5], [4, 5]),
+        # JSON clients send whole doubles as integers, in arrays too.
+        ("weights", [1, 2.5], [1.0, 2.5]),
+        ("weights", [3], [3.0]),
+    ],
+)
+def test_set_parameter(
+    api: TestClient, servers: Servers, name: str, value: object, stored: object
+):
+    path = f"/nodes/test_servers/parameters/{name}"
+
+    response = api.put(path, json={"value": value})
+
+    assert response.status_code == 200
+    assert response.json() == {"name": name, "value": stored}
+    actual = cast(object, servers.node.get_parameter(name).value)
+    assert (actual.tolist() if isinstance(actual, array) else actual) == stored
+    assert api.get(path).json()["value"] == stored
+
+
+@pytest.mark.parametrize(
+    "value, reason",
+    [
+        (256, "out of range"),
+        ("red", "Wrong parameter type"),
+    ],
+)
+def test_set_parameter_refused(
+    api: TestClient, servers: Servers, value: object, reason: str
+):
+    response = api.put(
+        "/nodes/test_servers/parameters/background_r", json={"value": value}
+    )
+
+    assert response.status_code == 422
+    assert reason in response.json()["detail"]
+    assert cast(object, servers.node.get_parameter("background_r").value) == 69
+
+
+@pytest.mark.usefixtures("servers")
+def test_set_parameter_rejects_invalid_input(api: TestClient):
+    response = api.put(
+        "/nodes/test_servers/parameters/background_r", json={"value": {"r": 1}}
+    )
+
+    assert response.status_code == 422
+
+
+def test_parameter_timeout(
+    api: TestClient, servers: Servers, monkeypatch: pytest.MonkeyPatch
+):
+    # The node is in the graph with its parameter services, but never answers.
+    _ = servers
+    monkeypatch.setattr(call_service, "__defaults__", (0.1,))
+
+    response = api.get("/nodes/test_unresponsive_servers/parameters/x")
+
+    assert response.status_code == 504
+
+
+@pytest.mark.usefixtures("servers")
+def test_health_leaves_out_parameter_services(api: TestClient):
+    _ = api.get("/nodes/test_servers/parameters/background_r")
+
+    services = cast(dict[str, bool], api.get("/health").json()["services"])
+    assert services.keys() == {
+        "/add_two_ints",
+        "/turtle1/teleport_absolute",
+    }
