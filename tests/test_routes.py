@@ -8,6 +8,7 @@ import pytest
 import rclpy
 from fastapi.testclient import TestClient
 from example_interfaces.srv import AddTwoInts
+from std_msgs.msg import Int32
 from turtlesim_msgs.srv import TeleportAbsolute
 
 from fastapi_ros2.api.v1.routes.graph import GraphResponse
@@ -113,12 +114,75 @@ def test_service_timeout(
     }
 
 
-def test_print(api: TestClient, servers: Servers):
-    assert api.post("/topics/print").json() == {"count": 1}
-    assert api.post("/topics/print").json() == {"count": 2}
+def test_publish_to_a_topic_in_the_graph(api: TestClient, servers: Servers):
+    response = api.post("/topics/print", json={"message": {"data": "hello"}})
 
-    wait_until(lambda: len(servers.prints) == 2)
-    assert servers.prints == ["Hello World: 0", "Hello World: 1"]
+    assert response.status_code == 200
+    assert response.json() == {"topic": "/print", "type": "std_msgs/msg/String"}
+    wait_until(lambda: servers.prints == ["hello"])
+
+
+def test_publish_to_a_new_topic(api: TestClient, servers: Servers):
+    received: list[int] = []
+    _ = servers.node.create_subscription(
+        Int32,
+        "/counts",
+        lambda msg: received.append(msg.data),
+        10,
+    )
+    wait_until(lambda: ros_state(api).node.count_subscribers("/counts") > 0)
+
+    response = api.post(
+        "/topics/counts",
+        json={"type": "std_msgs/msg/Int32", "message": {"data": 7}},
+    )
+
+    assert response.status_code == 200
+    # The first message on a new publisher arrives too.
+    wait_until(lambda: received == [7])
+
+
+@pytest.mark.usefixtures("servers")
+@pytest.mark.parametrize(
+    "path, body, detail",
+    [
+        (
+            "/topics/nowhere",
+            {"message": {}},
+            'Topic "/nowhere" is not in the ROS graph; give its type',
+        ),
+        (
+            "/topics/print",
+            {"type": "std_msgs/msg/Int32", "message": {}},
+            'Topic "/print" has type std_msgs/msg/String, not std_msgs/msg/Int32',
+        ),
+        (
+            "/topics/x",
+            {"type": "std_msgs/msg/Nope", "message": {}},
+            'Unknown message type "std_msgs/msg/Nope"',
+        ),
+        (
+            "/topics/print",
+            {"message": {"data": 1}},
+            "message.data should be a string",
+        ),
+        (
+            "/topics/1x",
+            {"type": "std_msgs/msg/String"},
+            '"/1x" is not a valid topic name',
+        ),
+    ],
+)
+def test_publish_rejects(
+    api: TestClient,
+    path: str,
+    body: dict[str, object],
+    detail: str,
+):
+    response = api.post(path, json=body)
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": detail}
 
 
 @pytest.mark.usefixtures("servers")

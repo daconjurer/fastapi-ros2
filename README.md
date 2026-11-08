@@ -25,7 +25,7 @@ docker compose exec turtlesim bash -c 'source /opt/ros/lyrical/setup.bash && ros
 
 - `POST /services/sum` calls the `example_interfaces/srv/AddTwoInts` service to add two integers.
 - `POST /services/move_turtle` calls the `turtlesim_msgs/srv/TeleportAbsolute` service to move the turtle to a position (x, y) and an angle in radians.
-- `POST /topics/print` publishes a `std_msgs/msg/String` message to the `/print` topic.
+- `POST /topics/{name}` publishes a JSON message to any topic.
 - `GET` and `PUT /nodes/{node}/parameters/{name}` read and set a parameter of any node.
 - `GET /graph` lists the nodes, topics, services, and actions in the ROS graph.
 - `GET /health` reports whether the API can talk to ROS.
@@ -52,20 +52,25 @@ When creating a new service, including both the `server` and `client` modules is
 
 ### Topics
 
-Listen on the `/print` topic:
+`POST /topics/{name}` publishes a message to any topic, as `ros2 topic pub --once` does, with the message's fields as JSON.
+For example, drive the turtle forward while turning:
 
 ```
-docker compose exec turtlesim bash -c 'source /opt/ros/lyrical/setup.bash && ros2 topic echo /print'
+curl -X POST localhost:8000/topics/turtle1/cmd_vel -H 'Content-Type: application/json' -d '{"message": {"linear": {"x": 2.0}, "angular": {"z": 1.8}}}'
 ```
 
-Each `POST /topics/print` returns the number of messages published so far, for example `{"count": 1}`, and the listener prints the message:
+It returns where the message went and as which type, here `{"topic": "/turtle1/cmd_vel", "type": "geometry_msgs/msg/Twist"}`, and the turtle's pose changes:
 
 ```
-data: 'Hello World: 0'
----
-data: 'Hello World: 1'
----
+docker compose exec turtlesim bash -c 'source /opt/ros/lyrical/setup.bash && ros2 topic echo --once /turtle1/pose'
 ```
+
+`{name}` is the topic's fully qualified name without the leading slash.
+The message type is the topic's type in the ROS graph, so a topic that is not in the graph yet needs it in the body, for example `{"type": "std_msgs/msg/String", "message": {"data": "hello"}}`.
+Fields left out keep their defaults.
+Every value is checked against its field's type before it is published, since ROS would otherwise truncate `1.5` to `1` for an integer or publish numbers beyond their type's range, which then arrive changed.
+A message that does not fit its type, a type that differs from the topic's, or an invalid topic name returns `422` with the reason.
+Any API client can publish to any topic, including the ones that drive robots, so expose the API only to clients you trust.
 
 ### Parameters
 

@@ -15,7 +15,7 @@ from rclpy.task import Future
 
 from fastapi_ros2.api.v1.controllers.add_two_ints import AddTwoIntsController
 from fastapi_ros2.api.v1.controllers.turtlesim import TurtleSimController
-from fastapi_ros2.api.v1.controllers.print import PrintController
+from fastapi_ros2.api.v1.controllers.topics import TopicController
 from fastapi_ros2.api.v1.controllers.parameters import ParameterController
 from fastapi_ros2.services.call import ServiceClient
 
@@ -88,7 +88,7 @@ class RosState:
     services: list[ServiceClient]
     add_controller: AddTwoIntsController
     turtle_controller: TurtleSimController
-    print_controller: PrintController
+    topic_controller: TopicController
     parameter_controller: ParameterController
 
 
@@ -108,7 +108,7 @@ async def ros_lifespan(_app: FastAPI) -> AsyncGenerator[dict[str, RosState]]:
 
     add_controller = AddTwoIntsController(node)
     turtle_controller = TurtleSimController(node)
-    print_controller = PrintController(node)
+    topic_controller = TopicController(node)
     parameter_controller = ParameterController(node)
 
     try:
@@ -120,7 +120,7 @@ async def ros_lifespan(_app: FastAPI) -> AsyncGenerator[dict[str, RosState]]:
                 services=[add_controller.client, turtle_controller.client],
                 add_controller=add_controller,
                 turtle_controller=turtle_controller,
-                print_controller=print_controller,
+                topic_controller=topic_controller,
                 parameter_controller=parameter_controller,
             ),
         }
