@@ -25,11 +25,15 @@ class AddTwoIntsService(Node):
     def __init__(self):
         super().__init__("add_two_ints_service")
         self.srv = self.create_service(
-            AddTwoInts, "add_two_ints", self.add_two_ints_callback
+            AddTwoInts,
+            "add_two_ints",
+            self.add_two_ints_callback,
         )
 
     def add_two_ints_callback(
-        self, request: AddTwoInts.Request, response: AddTwoInts.Response
+        self,
+        request: AddTwoInts.Request,
+        response: AddTwoInts.Response,
     ) -> AddTwoInts.Response:
         self.get_logger().info(f"Incoming request: a = {request.a}, b = {request.b}")
         # `sum` is an int64, and an out-of-range value fails to serialize and stops

@@ -11,7 +11,7 @@ router = APIRouter(
     responses={
         **SERVICE_ERRORS,
         404: {"model": ServiceError, "description": "No such node or parameter"},
-    }
+    },
 )
 
 Double = Annotated[float, Field(allow_inf_nan=False)]
@@ -25,7 +25,8 @@ type ParameterJson = (
 NodeName = Annotated[
     str,
     Path(
-        description="Fully qualified, without the leading slash", examples=["turtlesim"]
+        description="Fully qualified, without the leading slash",
+        examples=["turtlesim"],
     ),
 ]
 """A node's name in the path, which may contain slashes for its namespace."""
@@ -54,8 +55,8 @@ ParameterBody = Annotated[
             "red": {
                 "summary": "Turtlesim's background red channel, 0 to 255",
                 "value": {"value": 255},
-            }
-        }
+            },
+        },
     ),
 ]
 """The `PUT` body, with an example for turtlesim."""
@@ -68,7 +69,9 @@ def _fully_qualified(node: NodeName) -> str:
 
 @router.get("/nodes/{node:path}/parameters/{name:path}")
 async def get_parameter(
-    ros: Ros, node: NodeName, name: ParameterName
+    ros: Ros,
+    node: NodeName,
+    name: ParameterName,
 ) -> ParameterResponse:
     """Read a parameter of any node in the graph."""
     value = await ros.parameter_controller.get(_fully_qualified(node), name)
@@ -78,11 +81,14 @@ async def get_parameter(
 @router.put(
     "/nodes/{node:path}/parameters/{name:path}",
     responses={
-        422: {"model": ServiceError, "description": "The node refused the value"}
+        422: {"model": ServiceError, "description": "The node refused the value"},
     },
 )
 async def set_parameter(
-    ros: Ros, node: NodeName, name: ParameterName, body: ParameterBody
+    ros: Ros,
+    node: NodeName,
+    name: ParameterName,
+    body: ParameterBody,
 ) -> ParameterResponse:
     """Set a parameter the node has, as `ros2 param set` does.
 

@@ -58,19 +58,20 @@ async def call_service(
     """
     if not client.service_is_ready():
         raise ServiceUnavailableError(
-            f'Service "{client.service_name}" is not available'
+            f'Service "{client.service_name}" is not available',
         )
 
     try:
         return await asyncio.wait_for(_call(client, request), timeout_sec)
     except TimeoutError:
         raise ServiceTimeoutError(
-            f'Service "{client.service_name}" did not respond within {timeout_sec}s'
+            f'Service "{client.service_name}" did not respond within {timeout_sec}s',
         ) from None
 
 
 async def _call(
-    client: Client[SrvRequestT, SrvResponseT], request: SrvRequestT
+    client: Client[SrvRequestT, SrvResponseT],
+    request: SrvRequestT,
 ) -> SrvResponseT:
     if client not in _in_flight:
         _in_flight[client] = asyncio.Semaphore(client.qos_profile.depth)
@@ -92,7 +93,8 @@ async def _call(
 
 
 def _transfer(
-    ros_future: Future[SrvResponseT], result: asyncio.Future[SrvResponseT]
+    ros_future: Future[SrvResponseT],
+    result: asyncio.Future[SrvResponseT],
 ) -> None:
     """Copy a completed rclpy future's outcome into an asyncio future.
 

@@ -35,7 +35,10 @@ def ready_client(node: Node, srv_name: str) -> AddClient:
 
 
 def call(
-    client: AddClient, a: int = 2, b: int = 3, timeout_sec: float = 1.0
+    client: AddClient,
+    a: int = 2,
+    b: int = 3,
+    timeout_sec: float = 1.0,
 ) -> AddTwoInts.Response:
     request = AddTwoInts.Request(a=a, b=b)
     return asyncio.run(call_service(client, request, timeout_sec))
@@ -70,7 +73,8 @@ def test_timeout_removes_the_pending_request(node: Node, servers: Servers):
 
 def test_a_burst_beyond_the_qos_depth_loses_no_calls(node: Node, servers: Servers):
     def slow_add(
-        request: AddTwoInts.Request, response: AddTwoInts.Response
+        request: AddTwoInts.Request,
+        response: AddTwoInts.Response,
     ) -> AddTwoInts.Response:
         time.sleep(0.002)
         response.sum = request.a + request.b

@@ -14,7 +14,8 @@ from fastapi_ros2.services.call import call_service, service_ready
 class TurtlesimMoveClientAsync:
     def __init__(self, node: Node):
         self.client_ = node.create_client(
-            TeleportAbsolute, "/turtle1/teleport_absolute"
+            TeleportAbsolute,
+            "/turtle1/teleport_absolute",
         )
         # Read once, since a destroyed client can no longer tell it.
         self.name: str = self.client_.service_name
@@ -23,10 +24,14 @@ class TurtlesimMoveClientAsync:
         return service_ready(self.client_)
 
     async def send_request(
-        self, x: float, y: float, theta: float
+        self,
+        x: float,
+        y: float,
+        theta: float,
     ) -> TeleportAbsolute.Response:
         return await call_service(
-            self.client_, TeleportAbsolute.Request(x=x, y=y, theta=theta)
+            self.client_,
+            TeleportAbsolute.Request(x=x, y=y, theta=theta),
         )
 
 
@@ -38,14 +43,16 @@ def main():
     minimal_client.client_.wait_for_service()
     future = minimal_client.client_.call_async(
         TeleportAbsolute.Request(
-            x=float(sys.argv[1]), y=float(sys.argv[2]), theta=float(sys.argv[3])
-        )
+            x=float(sys.argv[1]),
+            y=float(sys.argv[2]),
+            theta=float(sys.argv[3]),
+        ),
     )
     rclpy.spin_until_future_complete(node, future)
     response = future.result()
     logger.info(
         f"Result of teleport_absolute with params "
-        f"x={float(sys.argv[1])}, y={float(sys.argv[2])}, theta={float(sys.argv[3])}: {response}"
+        f"x={float(sys.argv[1])}, y={float(sys.argv[2])}, theta={float(sys.argv[3])}: {response}",
     )
 
     node.destroy_node()

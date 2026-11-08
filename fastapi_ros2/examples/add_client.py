@@ -30,14 +30,14 @@ class SumClient(Node):
             response = SumResponse(sum=-1)
 
             self.get_logger().info(
-                f'Sending request to service "{self._client.name}" with params {a} to {b}'
+                f'Sending request to service "{self._client.name}" with params {a} to {b}',
             )
             server_response = await self._client.send_request(a, b)
             result_sum = int(server_response.sum)
 
             self.get_logger().info(
                 f'Response from service "{self._client.name}" '
-                f"to request with params {a} to {b}: {result_sum}"
+                f"to request with params {a} to {b}: {result_sum}",
             )
             response.sum = result_sum
             return response

@@ -58,15 +58,20 @@ class Servers:
         self.add_two_ints = AddTwoIntsService()
         self.node = rclpy.create_node("test_servers")
         self.teleport = self.node.create_service(
-            TeleportAbsolute, "/turtle1/teleport_absolute", self._teleport
+            TeleportAbsolute,
+            "/turtle1/teleport_absolute",
+            self._teleport,
         )
         self.teleports: list[TeleportAbsolute.Request] = []
         self.prints: list[str] = []
         self.node.create_subscription(
-            String, "/print", lambda msg: self.prints.append(msg.data), 10
+            String,
+            "/print",
+            lambda msg: self.prints.append(msg.data),
+            10,
         )
         red = ParameterDescriptor(
-            integer_range=[IntegerRange(from_value=0, to_value=255, step=1)]
+            integer_range=[IntegerRange(from_value=0, to_value=255, step=1)],
         )
         self.node.declare_parameter("background_r", 69, red)
         self.node.declare_parameter("scale", 1.0)
@@ -74,7 +79,10 @@ class Servers:
         self.node.declare_parameter("ids", [1, 2])
         self.node.declare_parameter("weights", [0.5])
         self.rotate = ActionServer(
-            self.node, RotateAbsolute, "/turtle1/rotate_absolute", self._rotate
+            self.node,
+            RotateAbsolute,
+            "/turtle1/rotate_absolute",
+            self._rotate,
         )
         # Services on this node receive requests but never answer: it never spins.
         self.unresponsive_node = rclpy.create_node("test_unresponsive_servers")
@@ -85,7 +93,9 @@ class Servers:
         self.spinner = Spinner(executor)
 
     def _teleport(
-        self, request: TeleportAbsolute.Request, response: TeleportAbsolute.Response
+        self,
+        request: TeleportAbsolute.Request,
+        response: TeleportAbsolute.Response,
     ) -> TeleportAbsolute.Response:
         self.teleports.append(request)
         return response

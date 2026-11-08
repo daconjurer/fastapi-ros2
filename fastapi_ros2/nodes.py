@@ -69,7 +69,7 @@ def _stop_on_crash(error: Exception) -> None:
     runs the same graceful shutdown as `docker compose stop`.
     """
     logger.opt(exception=error).critical(
-        "The ROS executor stopped after a callback failed; stopping the API"
+        "The ROS executor stopped after a callback failed; stopping the API",
     )
     os.kill(os.getpid(), signal.SIGTERM)
 
@@ -122,7 +122,7 @@ async def ros_lifespan(_app: FastAPI) -> AsyncGenerator[dict[str, RosState]]:
                 turtle_controller=turtle_controller,
                 print_controller=print_controller,
                 parameter_controller=parameter_controller,
-            )
+            ),
         }
     finally:
         spinner.stop()

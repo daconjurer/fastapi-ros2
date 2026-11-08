@@ -64,7 +64,7 @@ class ParametersClientAsync:
         _, client = self._clients_for(node_name)
         await _discovered(client)
         request = SetParameters.Request(
-            parameters=[Parameter(name=name, value=ros_value)]
+            parameters=[Parameter(name=name, value=ros_value)],
         )
         response = await call_service(client, request)
         result = cast(list[SetParametersResult], response.results)[0]
@@ -81,7 +81,7 @@ class ParametersClientAsync:
         values = cast(list[ParameterValue], response.values)
         if not values or values[0].type == ParameterType.PARAMETER_NOT_SET:
             raise ParameterNotFoundError(
-                f'Node "{node_name}" has no parameter "{name}"'
+                f'Node "{node_name}" has no parameter "{name}"',
             )
         return values[0]
 
@@ -102,7 +102,8 @@ class ParametersClientAsync:
 
 
 async def _discovered[Req: BaseMessage, Res: BaseMessage](
-    client: Client[Req, Res], timeout: float = 1.0
+    client: Client[Req, Res],
+    timeout: float = 1.0,
 ) -> None:
     """Give a new client a moment to discover its service, which it does not
     see at once; `call_service` reports it unavailable if it still doesn't."""
