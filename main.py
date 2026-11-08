@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 
 from fastapi_ros2.api.v1.routes.add_two_ints import router as add_two_ints_router
 from fastapi_ros2.api.v1.routes.turtlesim import router as turtle_router
-from fastapi_ros2.api.v1.routes.print import router as print_router
+from fastapi_ros2.api.v1.routes.topics import router as topics_router
 from fastapi_ros2.api.v1.routes.health import router as health_router
 from fastapi_ros2.api.v1.routes.graph import router as graph_router
 from fastapi_ros2.api.v1.routes.parameters import router as parameters_router
@@ -21,6 +21,8 @@ from fastapi_ros2.parameters.client import (
     ParameterNotFoundError,
     ParameterRefusedError,
 )
+from fastapi_ros2.topics.messages import MessageError
+from fastapi_ros2.topics.publisher import PublishError
 from fastapi_ros2.services.call import ServiceTimeoutError, ServiceUnavailableError
 
 app = FastAPI(
@@ -30,7 +32,7 @@ app = FastAPI(
 )
 app.include_router(add_two_ints_router)
 app.include_router(turtle_router)
-app.include_router(print_router)
+app.include_router(topics_router)
 app.include_router(health_router)
 app.include_router(graph_router)
 app.include_router(parameters_router)
@@ -65,6 +67,12 @@ async def service_timeout_handler(_request: Request, exc: ServiceTimeoutError):
 @app.exception_handler(ParameterNotFoundError)
 async def not_found_handler(_request: Request, exc: Exception):
     return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(MessageError)
+@app.exception_handler(PublishError)
+async def publish_error_handler(_request: Request, exc: Exception):
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
 
 
 @app.exception_handler(ParameterRefusedError)
