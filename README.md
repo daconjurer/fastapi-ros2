@@ -26,6 +26,7 @@ docker compose exec turtlesim bash -c 'source /opt/ros/lyrical/setup.bash && ros
 - `POST /services/sum` calls the `example_interfaces/srv/AddTwoInts` service to add two integers.
 - `POST /services/move_turtle` calls the `turtlesim_msgs/srv/TeleportAbsolute` service to move the turtle to a position (x, y) and an angle in radians.
 - `POST /topics/print` publishes a `std_msgs/msg/String` message to the `/print` topic.
+- `GET /graph` lists the nodes, topics, services, and actions in the ROS graph.
 - `GET /health` reports whether the API can talk to ROS.
 
 ### Services
@@ -64,6 +65,22 @@ data: 'Hello World: 0'
 data: 'Hello World: 1'
 ---
 ```
+
+### Graph
+
+`GET /graph` shows what the API's node sees of the ROS graph, as `ros2 node list` and `ros2 <topic|service|action> list -t` do:
+
+```
+curl localhost:8000/graph
+```
+
+```json
+{"nodes": ["/add_two_ints_service", "/fastapi_ros2", "/turtlesim"], "topics": {"/turtle1/pose": ["turtlesim_msgs/msg/Pose"], ...}, "services": {"/add_two_ints": ["example_interfaces/srv/AddTwoInts"], ...}, "actions": {"/turtle1/rotate_absolute": ["turtlesim_msgs/action/RotateAbsolute"]}}
+```
+
+Names are fully qualified and map to their types.
+Like ros2cli, it leaves out hidden names, such as the topics and services each action is built on.
+Discovery is asynchronous, so a node that just started or stopped may take a moment to show or disappear.
 
 ### Health
 
