@@ -21,7 +21,9 @@ RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /root/.bashrc
 
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
-RUN uv sync --locked --no-default-groups --no-cache
+# Dependencies first, so that code changes don't reinstall them.
+RUN uv sync --locked --no-default-groups --no-cache --no-install-project
 COPY . .
+RUN uv sync --locked --no-default-groups --no-cache
 
 ENTRYPOINT ["/ros_entrypoint.sh"]

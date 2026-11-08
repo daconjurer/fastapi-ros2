@@ -21,10 +21,17 @@ dev = [
     "basedpyright>=1.40.2,<2",
 ]
 
+[build-system]
+requires = ["uv_build>=0.11.21,<0.12"]
+build-backend = "uv_build"
+
 [tool.uv]
-# The app runs from source and is never built or installed.
-package = false
 default-groups = "all"
+
+[tool.uv.build-backend]
+# The package is at the root, not under src/. uv installs it in editable mode, so
+# the code still runs from the checkout, with its metadata in the venv.
+module-root = ""
 
 [tool.ruff.lint]
 # Ruff's classic defaults, so upgrading ruff doesn't change which rules apply.
