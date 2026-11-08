@@ -19,6 +19,74 @@ Turtlesim runs headless in the container, so check the turtle's position with:
 docker compose exec turtlesim bash -c 'source /opt/ros/lyrical/setup.bash && ros2 topic echo --once /turtle1/pose'
 ```
 
+## Endpoints
+
+![The endpoints in the API docs](assets/endpoints.png)
+
+- `POST /services/sum` calls the `example_interfaces/srv/AddTwoInts` service to add two integers.
+- `POST /services/move_turtle` calls the `turtlesim_msgs/srv/TeleportAbsolute` service to move the turtle to a position (x, y) and an angle in radians.
+- `POST /topics/print` publishes a `std_msgs/msg/String` message to the `/print` topic.
+- `GET /health` reports whether the API can talk to ROS.
+
+### Services
+
+The service endpoints take JSON bodies:
+
+```
+curl -X POST localhost:8000/services/sum -H 'Content-Type: application/json' -d '{"a": 2, "b": 3}'
+curl -X POST localhost:8000/services/move_turtle -H 'Content-Type: application/json' -d '{"x": 3, "y": 4, "theta": 1.5}'
+```
+
+Inputs are validated against the ROS message field types before they reach ROS: integers must fit in 64 bits (and so must their sum), and floats must be finite and fit in 32 bits.
+Invalid input returns `422`.
+Request and response bodies mirror the ROS service's request and response fields, so `/services/sum` returns `{"sum": 5}` and `/services/move_turtle` returns `{}`, since `TeleportAbsolute` responds with no fields.
+Their Pydantic models declare the ROS types' fields, and `@mirrors` in `fastapi_ros2/api/v1/models.py` checks at import that they match the ROS messages' names, order, and types.
+The endpoints await asynchronous clients for each of the ROS2 services, so a slow service does not block the rest of the API.
+The API starts whether or not the services are running.
+A call returns `503` if its service is not available and `504` if it does not respond within 5 seconds.
+
+The services live in the `services` module of the package, where any new service must be placed.
+When creating a new service, including both the `server` and `client` modules is recommended.
+
+### Topics
+
+Listen on the `/print` topic:
+
+```
+docker compose exec turtlesim bash -c 'source /opt/ros/lyrical/setup.bash && ros2 topic echo /print'
+```
+
+Each `POST /topics/print` returns the number of messages published so far, for example `{"count": 1}`, and the listener prints the message:
+
+```
+data: 'Hello World: 0'
+---
+data: 'Hello World: 1'
+---
+```
+
+### Health
+
+`GET /health` reports whether the API can talk to ROS:
+
+```
+curl localhost:8000/health
+```
+
+```json
+{"status": "ok", "node": {"name": "/fastapi_ros2", "spinning": true}, "services": {"/add_two_ints": true, "/turtle1/teleport_absolute": true}}
+```
+
+- `node.spinning`: the API's ROS node is processing callbacks; without it no service response or topic message arrives.
+- `services`: every service the API calls, and whether it is currently available.
+
+It returns `200` when everything is ready and `503` otherwise, with the same body.
+
+If a ROS callback in the API raises, its node stops spinning for good, so the API logs the error and shuts itself down.
+Docker Compose restarts it (`restart: unless-stopped`), so it recovers in about a second; a manual `docker compose stop` or `down` does not trigger a restart.
+Compose also runs `/health` as the `api` service's healthcheck, so `docker compose ps` shows whether the API is ready, and `docker compose up -d --wait` returns once it is.
+Run outside Docker, the process just exits.
+
 ## Development
 
 There are two Docker-based workflows, both on the same image as the quick start.
@@ -60,101 +128,19 @@ uv venv --system-site-packages --python /usr/bin/python3
 uv sync --locked
 ```
 
-Then run any of the nodes as a module, for example the publisher example:
+Start the services, each in its own terminal, then the API:
+
+```
+uv run python -m fastapi_ros2.services.add_two_ints.server
+ros2 run turtlesim turtlesim_node
+uv run uvicorn main:app
+```
+
+Then go to **http://127.0.0.1:8000/docs**.
+Turtlesim opens a window that shows the turtle move on each `POST /services/move_turtle`.
+
+The `examples` module has standalone nodes to run the same way, for example the publisher:
 
 ```
 uv run python -m fastapi_ros2.examples.print_publisher
 ```
-
-## Starting the API with `topics` and `services` routes
-The current version of the API has the following endpoints available:
-
-![Alt text](assets/enpoints.png)
-
-These allow:
-- publishing to a topic `/print` a message of type `string`, using the `topics` route.
-- place a request to the service `example_interfaces.srv.AddTwoInts` to sum up two integers and get the result back.
-- place a request to the service `turtlesim_msgs.srv.TeleportAbsolute` to perform an absolute movement (position in cartesian x,y coordinates and angle in radians).
-
-To start the app, run the following command from the package root directory:
-
-```
-uv run uvicorn main:app
-```
-
-![Alt text](assets/startup.png)
-
-Then go to **http://127.0.0.1:8000/docs**
-
-### Services
-
-This version of the app includes two services endpoints: `POST /services/sum` and `POST /services/move_turtle`.
-They take JSON bodies, for example:
-
-```
-curl -X POST localhost:8000/services/sum -H 'Content-Type: application/json' -d '{"a": 2, "b": 3}'
-curl -X POST localhost:8000/services/move_turtle -H 'Content-Type: application/json' -d '{"x": 3, "y": 4, "theta": 1.5}'
-```
-
-Inputs are validated against the ROS message field types before they reach ROS: integers must fit in 64 bits (and so must their sum), and floats must be finite and fit in 32 bits.
-Invalid input returns `422`.
-Request and response bodies mirror the ROS service's request and response fields, so `/services/sum` returns `{"sum": 5}` and `/services/move_turtle` returns `{}`, since `TeleportAbsolute` responds with no fields.
-Their Pydantic models declare the ROS types' fields, and `@mirrors` in `fastapi_ros2/api/v1/models.py` checks at import that they match the ROS messages' names, order, and types.
-The endpoints await asynchronous clients for each of the ROS2 services, so a slow service does not block the rest of the API.
-The API starts whether or not the services are running.
-A call returns `503` if its service is not available and `504` if it does not respond within 5 seconds.
-
-The services live in the `services` module of the package, where any new service must be placed. When creating a new service, including both the `server` and `client` modules is recommended.
-
-From the package location, start the `add_two_ints` service:
-```
-uv run python -m fastapi_ros2.services.add_two_ints.server
-```
-
-Start the `turtlesim` service:
-
-```
-ros2 run turtlesim turtlesim_node
-```
-
-This will spawn a new **turtlesim** window that is tied to the server that will receive the movement requests:
-
-![Alt text](assets/turtle.png)
-
-This window will show the movements of the turtle when the `POST /services/move_turtle` endpoint is used.
-
-### Topics
-
-When using the endpoint `POST /topics/print`, from a different terminal, sniff the `/print` topic with:
-
-```
-ros2 topic echo /print
-```
-
-The terminal should show the messages published to the topic:
-
-![ROS topic echo](assets/ros_topic_echo.png)
-
-The same will apply for any topic added to the API through the `topics` route.
-
-### Health
-
-`GET /health` reports whether the API can talk to ROS:
-
-```
-curl localhost:8000/health
-```
-
-```json
-{"status": "ok", "node": {"name": "/fastapi_ros2", "spinning": true}, "services": {"/add_two_ints": true, "/turtle1/teleport_absolute": true}}
-```
-
-- `node.spinning`: the API's ROS node is processing callbacks; without it no service response or topic message arrives.
-- `services`: every service the API calls, and whether it is currently available.
-
-It returns `200` when everything is ready and `503` otherwise, with the same body.
-
-If a ROS callback in the API raises, its node stops spinning for good, so the API logs the error and shuts itself down.
-Docker Compose restarts it (`restart: unless-stopped`), so it recovers in about a second; a manual `docker compose stop` or `down` does not trigger a restart.
-Compose also runs `/health` as the `api` service's healthcheck, so `docker compose ps` shows whether the API is ready, and `docker compose up -d --wait` returns once it is.
-Run outside Docker, the process just exits.

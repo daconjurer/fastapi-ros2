@@ -1,5 +1,7 @@
 from collections.abc import Sequence
+from pathlib import Path
 from typing import cast
+import tomllib
 
 import uvicorn
 from fastapi import FastAPI, Request
@@ -15,7 +17,10 @@ from fastapi_ros2.api.v1.routes.health import router as health_router
 from fastapi_ros2.nodes import ros_lifespan
 from fastapi_ros2.services.call import ServiceTimeoutError, ServiceUnavailableError
 
-app = FastAPI(lifespan=ros_lifespan)
+# The app is not an installed package, so its version is read from pyproject.toml.
+_pyproject = tomllib.loads(Path(__file__).with_name("pyproject.toml").read_text())
+_version = cast(str, _pyproject["project"]["version"])
+app = FastAPI(title="FastAPI ROS2", version=_version, lifespan=ros_lifespan)
 app.include_router(add_two_ints_router)
 app.include_router(turtle_router)
 app.include_router(print_router)
