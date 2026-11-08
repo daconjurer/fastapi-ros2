@@ -26,6 +26,7 @@ docker compose exec turtlesim bash -c 'source /opt/ros/lyrical/setup.bash && ros
 - `POST /services/sum` calls the `example_interfaces/srv/AddTwoInts` service to add two integers.
 - `POST /services/move_turtle` calls the `turtlesim_msgs/srv/TeleportAbsolute` service to move the turtle to a position (x, y) and an angle in radians.
 - `POST /topics/print` publishes a `std_msgs/msg/String` message to the `/print` topic.
+- `GET` and `PUT /nodes/{node}/parameters/{name}` read and set a parameter of any node.
 - `GET /graph` lists the nodes, topics, services, and actions in the ROS graph.
 - `GET /health` reports whether the API can talk to ROS.
 
@@ -65,6 +66,22 @@ data: 'Hello World: 0'
 data: 'Hello World: 1'
 ---
 ```
+
+### Parameters
+
+`GET /nodes/{node}/parameters/{name}` reads a parameter of any node in the graph, and `PUT` sets it, as `ros2 param get` and `ros2 param set` do.
+For example, set the red channel of turtlesim's background:
+
+```
+curl localhost:8000/nodes/turtlesim/parameters/background_r
+curl -X PUT localhost:8000/nodes/turtlesim/parameters/background_r -H 'Content-Type: application/json' -d '{"value": 255}'
+```
+
+Both return the parameter, here `{"name": "background_r", "value": 255}`.
+`{node}` is the node's fully qualified name without the leading slash, for example `my_namespace/my_node`.
+The value can be a boolean, integer, float, string, or a list of one of those, and the node checks it: turtlesim refuses `300` (out of its 0 to 255 range) or `"red"` (not an integer) with `422` and the node's reason.
+A whole number for a float parameter is taken as a float, since JSON clients often send `1.0` as `1`.
+An unknown node or parameter returns `404`, and a node that does not answer returns `503` or `504`, as the service endpoints do.
 
 ### Graph
 

@@ -18,7 +18,7 @@ class NodeHealth(BaseModel):
 class HealthResponse(BaseModel):
     status: Literal["ok", "unavailable"]
     node: NodeHealth
-    # Every service the API's node has a client for, by fully qualified name.
+    # Every service the API depends on, by fully qualified name.
     services: dict[str, bool]
 
 
@@ -34,7 +34,11 @@ async def health(ros: Ros, response: Response) -> HealthResponse:
     )
     services = dict.fromkeys(ros.service_names, False)
     if context_ok:
-        services = {c.service_name: c.service_is_ready() for c in node.clients}
+        services = {
+            c.service_name: c.service_is_ready()
+            for c in node.clients
+            if c.service_name in ros.service_names
+        }
 
     ready = node_health.spinning and all(services.values())
     if not ready:
