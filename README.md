@@ -26,6 +26,7 @@ docker compose exec turtlesim bash -c 'source /opt/ros/lyrical/setup.bash && ros
 - `POST /services/sum` calls the `example_interfaces/srv/AddTwoInts` service to add two integers.
 - `POST /services/move_turtle` calls the `turtlesim_msgs/srv/TeleportAbsolute` service to move the turtle to a position (x, y) and an angle in radians.
 - `POST /topics/{name}` publishes a JSON message to any topic.
+- `POST /actions/rotate_turtle` sends a goal to the `turtlesim_msgs/action/RotateAbsolute` action, with its feedback and outcome over a WebSocket and a cancel endpoint.
 - `GET` and `PUT /nodes/{node}/parameters/{name}` read and set a parameter of any node.
 - `GET /graph` lists the nodes, topics, services, and actions in the ROS graph.
 - `GET /health` reports whether the API can talk to ROS.
@@ -72,6 +73,42 @@ Every value is checked against its field's type before it is published, since RO
 A message that does not fit its type, a type that differs from the topic's, or an invalid topic name returns `422` with the reason.
 Any API client can publish to any topic, including the ones that drive robots, so expose the API only to clients you trust.
 
+### Actions
+
+`POST /actions/rotate_turtle` rotates the turtle to a heading in radians, with turtlesim's `RotateAbsolute` action.
+It returns `202` with the goal's id as soon as turtlesim accepts the goal:
+
+```
+curl -X POST localhost:8000/actions/rotate_turtle -H 'Content-Type: application/json' -d '{"theta": 3.0}'
+```
+
+```json
+{"goal_id": "6396c4f2-b492-477c-ad4a-3957261f3360"}
+```
+
+Follow the goal on the WebSocket at `/actions/rotate_turtle/{goal_id}`, for example with [websocat](https://github.com/vi/websocat):
+
+```
+websocat ws://localhost:8000/actions/rotate_turtle/6396c4f2-b492-477c-ad4a-3957261f3360
+```
+
+It sends each feedback message as it arrives, about 60 a second, then the outcome, and closes:
+
+```json
+{"feedback": {"remaining": 2.968}}
+{"feedback": {"remaining": 2.952}}
+...
+{"status": "succeeded", "result": {"delta": -2.992}}
+```
+
+The status is `succeeded`, `canceled`, or `aborted`.
+A goal that has finished sends only its outcome, for a minute after it finishes, and an unknown goal closes the WebSocket with code `4404`.
+
+`POST /actions/rotate_turtle/{goal_id}/cancel` asks turtlesim to cancel the goal, and the goal's outcome says whether it was canceled.
+Canceling a goal that has finished returns `409`, and an unknown goal `404`.
+A new goal aborts the one the turtle is rotating to, as turtlesim does for any client.
+Like the service endpoints, sending a goal returns `503` if the action is not available, `504` if it does not answer within 5 seconds, and `422` for a heading that is not a finite 32-bit float.
+
 ### Parameters
 
 `GET /nodes/{node}/parameters/{name}` reads a parameter of any node in the graph, and `PUT` sets it, as `ros2 param get` and `ros2 param set` do.
@@ -113,11 +150,12 @@ curl localhost:8000/health
 ```
 
 ```json
-{"status": "ok", "node": {"name": "/fastapi_ros2", "spinning": true}, "services": {"/add_two_ints": true, "/turtle1/teleport_absolute": true}}
+{"status": "ok", "node": {"name": "/fastapi_ros2", "spinning": true}, "services": {"/add_two_ints": true, "/turtle1/teleport_absolute": true}, "actions": {"/turtle1/rotate_absolute": true}}
 ```
 
 - `node.spinning`: the API's ROS node is processing callbacks; without it no service response or topic message arrives.
 - `services`: every service the API calls, and whether it is currently available.
+- `actions`: the same for every action.
 
 It returns `200` when everything is ready and `503` otherwise, with the same body.
 

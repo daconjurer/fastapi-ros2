@@ -1,13 +1,14 @@
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Annotated, cast, final
+from typing import Annotated, Protocol, cast, final
 import os
 import signal
 import threading
 
 import rclpy
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI
+from starlette.requests import HTTPConnection
 from loguru import logger
 from rclpy.executors import ExternalShutdownException, SingleThreadedExecutor
 from rclpy.node import Node
@@ -16,8 +17,8 @@ from rclpy.task import Future
 from fastapi_ros2.api.v1.controllers.add_two_ints import AddTwoIntsController
 from fastapi_ros2.api.v1.controllers.turtlesim import TurtleSimController
 from fastapi_ros2.api.v1.controllers.topics import TopicController
+from fastapi_ros2.api.v1.controllers.rotate import RotateController
 from fastapi_ros2.api.v1.controllers.parameters import ParameterController
-from fastapi_ros2.services.call import ServiceClient
 
 
 @final
@@ -74,6 +75,16 @@ def _stop_on_crash(error: Exception) -> None:
     os.kill(os.getpid(), signal.SIGTERM)
 
 
+class Dependency(Protocol):
+    """A service or action the API depends on, as /health reports it."""
+
+    name: str
+
+    def is_ready(self) -> bool:
+        """Whether its server is available, and False once rclpy is shut down."""
+        ...
+
+
 @dataclass(frozen=True)
 class RosState:
     """The API's ROS node and what the routes use it through."""
@@ -85,10 +96,12 @@ class RosState:
     node_name: str
     # The services the API depends on, not the parameter services it calls on
     # demand.
-    services: list[ServiceClient]
+    services: list[Dependency]
+    actions: list[Dependency]
     add_controller: AddTwoIntsController
     turtle_controller: TurtleSimController
     topic_controller: TopicController
+    rotate_controller: RotateController
     parameter_controller: ParameterController
 
 
@@ -109,6 +122,7 @@ async def ros_lifespan(_app: FastAPI) -> AsyncGenerator[dict[str, RosState]]:
     add_controller = AddTwoIntsController(node)
     turtle_controller = TurtleSimController(node)
     topic_controller = TopicController(node)
+    rotate_controller = RotateController(node)
     parameter_controller = ParameterController(node)
 
     try:
@@ -118,21 +132,25 @@ async def ros_lifespan(_app: FastAPI) -> AsyncGenerator[dict[str, RosState]]:
                 spin_thread=spinner.thread,
                 node_name=node.get_fully_qualified_name(),
                 services=[add_controller.client, turtle_controller.client],
+                actions=[rotate_controller.client],
                 add_controller=add_controller,
                 turtle_controller=turtle_controller,
                 topic_controller=topic_controller,
+                rotate_controller=rotate_controller,
                 parameter_controller=parameter_controller,
             ),
         }
     finally:
         spinner.stop()
+        rotate_controller.client.destroy()
         node.destroy_node()
         rclpy.try_shutdown()
 
 
-def _ros_state(request: Request) -> RosState:
-    # Starlette's request state is untyped; the lifespan above sets it.
-    return cast(RosState, request.state.ros)
+def _ros_state(connection: HTTPConnection) -> RosState:
+    # A connection is a request or a WebSocket. Its state is untyped; the
+    # lifespan above sets it.
+    return cast(RosState, connection.state.ros)
 
 
 Ros = Annotated[RosState, Depends(_ros_state)]
