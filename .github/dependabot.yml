@@ -1,0 +1,31 @@
+version: 2
+# Every block waits 7 days after a release before proposing it (security updates do not)
+updates:
+  # pyproject.toml and uv.lock: one PR per update, to merge or revert each alone
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  # Images: the stages in the Dockerfile, and the CI image in the workflows. The ROS
+  # images are rolling tags pinned by digest, so only their digests move.
+  - package-ecosystem: docker
+    directories:
+      - /
+      - /.github/workflows
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

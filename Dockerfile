@@ -1,7 +1,11 @@
-FROM ros:lyrical-ros-base
+# Tool images as named stages, so that Dependabot sees and updates them.
+FROM ghcr.io/astral-sh/uv:0.11.21 AS uv
+FROM ghcr.io/casey/just:1.59.0 AS just
 
-COPY --from=ghcr.io/astral-sh/uv:0.11.21 /uv /uvx /usr/local/bin/
-COPY --from=ghcr.io/casey/just:1.59.0 /just /usr/local/bin/
+FROM ros:lyrical-ros-base@sha256:3224ee150cb02eb89a5e0811bc267b57ed3a91b9c10191df57810726a7e916d7
+
+COPY --from=uv /uv /uvx /usr/local/bin/
+COPY --from=just /just /usr/local/bin/
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ros-lyrical-example-interfaces ros-lyrical-turtlesim \

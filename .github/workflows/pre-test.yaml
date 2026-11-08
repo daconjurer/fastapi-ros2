@@ -9,8 +9,10 @@ jobs:
     name: test
     runs-on: ubuntu-latest
     # A generic ROS 2 Lyrical image with uv, just, and a venv at /opt/venv that sees the
-    # system site-packages, pinned so that rebuilding it never changes CI without a commit here.
-    container: ghcr.io/daconjurer/ros2-for-ci:lyrical-b20e21592fdb4948082a5dd03a627cca9fe2ebf3
+    # system site-packages. Pinned by digest so that rebuilding it never changes CI without a
+    # commit here; Dependabot proposes that commit.
+    container:
+      image: ghcr.io/daconjurer/ros2-for-ci:lyrical-latest@sha256:888eb24423bca086f53ca3afa2f12eeb1b2262cf74284df616a1603e08183ab0
     # Actions ignores the image's entrypoint, so have every bash step source ROS.
     env:
       BASH_ENV: /opt/ros/lyrical/setup.bash
