@@ -18,8 +18,9 @@ class NodeHealth(BaseModel):
 class HealthResponse(BaseModel):
     status: Literal["ok", "unavailable"]
     node: NodeHealth
-    # Every service the API depends on, by fully qualified name.
+    # Every service and action the API depends on, by fully qualified name.
     services: dict[str, bool]
+    actions: dict[str, bool]
 
 
 @router.get("/health", responses={503: {"model": HealthResponse}})
@@ -29,10 +30,12 @@ async def health(ros: Ros, response: Response) -> HealthResponse:
     # once rclpy is shut down the node is destroyed.
     spinning = ros.node.context.ok() and ros.spin_thread.is_alive()
     services = {service.name: service.is_ready() for service in ros.services}
-    ready = spinning and all(services.values())
+    actions = {action.name: action.is_ready() for action in ros.actions}
+    ready = spinning and all(services.values()) and all(actions.values())
     response.status_code = 200 if ready else 503
     return HealthResponse(
         status="ok" if ready else "unavailable",
         node=NodeHealth(name=ros.node_name, spinning=spinning),
         services=services,
+        actions=actions,
     )

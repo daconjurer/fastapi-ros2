@@ -1,20 +1,11 @@
 import asyncio
 import weakref
-from typing import Any, Protocol, cast
+from typing import Any
 
 from rclpy.client import Client
-from rclpy.task import Future
 from rclpy.type_support import SrvRequestT, SrvResponseT
 
-
-class ServiceClient(Protocol):
-    """A client of a service the API depends on, as /health reports it."""
-
-    name: str
-
-    def is_ready(self) -> bool:
-        """Whether the service is available, and False once rclpy is shut down."""
-        ...
+from fastapi_ros2.futures import ros_result
 
 
 def service_ready(client: Client[Any, Any]) -> bool:  # pyright: ignore[reportExplicitAny]
@@ -77,38 +68,9 @@ async def _call(
         _in_flight[client] = asyncio.Semaphore(client.qos_profile.depth)
 
     async with _in_flight[client]:
-        loop = asyncio.get_running_loop()
-        result: asyncio.Future[SrvResponseT] = loop.create_future()
-
-        def on_done(done: Future[SrvResponseT]) -> None:
-            loop.call_soon_threadsafe(_transfer, done, result)
-
         ros_future = client.call_async(request)
-        ros_future.add_done_callback(on_done)
         try:
-            return await result
+            return await ros_result(ros_future)
         finally:
             if not ros_future.done():
                 client.remove_pending_request(ros_future)
-
-
-def _transfer(
-    ros_future: Future[SrvResponseT],
-    result: asyncio.Future[SrvResponseT],
-) -> None:
-    """Copy a completed rclpy future's outcome into an asyncio future.
-
-    Runs on the event loop thread, scheduled from the executor thread with
-    `loop.call_soon_threadsafe`, because asyncio futures are not thread-safe.
-    Does nothing if `result` is already done, which happens when the call
-    timed out and `asyncio.wait_for` cancelled it before the response arrived.
-    """
-    if result.done():
-        return
-    exception = ros_future.exception()
-    if exception is not None:
-        result.set_exception(exception)
-    else:
-        # rclpy types the result as optional, but a future done without an
-        # exception has one.
-        result.set_result(cast(SrvResponseT, ros_future.result()))

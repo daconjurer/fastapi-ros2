@@ -7,11 +7,12 @@ from typing import Any, cast, final
 import pytest
 import rclpy
 from fastapi.testclient import TestClient
-from rclpy.action import ActionServer
+from rclpy.action import ActionServer, CancelResponse
 from rclpy.action.server import ServerGoalHandle
 from rcl_interfaces.msg import IntegerRange, ParameterDescriptor
 from rclpy.client import Client
 from rclpy.executors import SingleThreadedExecutor
+from rclpy.task import Future
 from std_msgs.msg import String
 from turtlesim_msgs.action import RotateAbsolute
 from turtlesim_msgs.srv import TeleportAbsolute
@@ -51,7 +52,8 @@ class Servers:
 
     `add_two_ints` is the project's real server, the teleport server records its
     requests, a subscription records what is published to `/print`, the rotate
-    action server succeeds at once, and the node has parameters like turtlesim's.
+    action server publishes feedback for `rotate_steps` ticks before it succeeds,
+    and the node has parameters like turtlesim's.
     """
 
     def __init__(self):
@@ -78,11 +80,14 @@ class Servers:
         self.node.declare_parameter("names", ["a"])
         self.node.declare_parameter("ids", [1, 2])
         self.node.declare_parameter("weights", [0.5])
+        self.rotate_steps = 3
+        self.rotating = 0
         self.rotate = ActionServer(
             self.node,
             RotateAbsolute,
             "/turtle1/rotate_absolute",
             self._rotate,
+            cancel_callback=lambda _: CancelResponse.ACCEPT,
         )
         # Services on this node receive requests but never answer: it never spins.
         self.unresponsive_node = rclpy.create_node("test_unresponsive_servers")
@@ -100,7 +105,7 @@ class Servers:
         self.teleports.append(request)
         return response
 
-    def _rotate(
+    async def _rotate(
         self,
         goal: ServerGoalHandle[
             RotateAbsolute.Goal,
@@ -109,10 +114,35 @@ class Servers:
             RotateAbsolute.Impl,
         ],
     ) -> RotateAbsolute.Result:
-        goal.succeed()
-        return RotateAbsolute.Result()
+        # A coroutine that waits on timers between steps, so that the node's
+        # single-threaded executor serves cancel requests in the meantime.
+        self.rotating += 1
+        try:
+            for step in range(self.rotate_steps):
+                if goal.is_cancel_requested:
+                    goal.canceled()
+                    return RotateAbsolute.Result(delta=float(step))
+                remaining = float(self.rotate_steps - step)
+                goal.publish_feedback(RotateAbsolute.Feedback(remaining=remaining))
+                await self._tick()
+            goal.succeed()
+            return RotateAbsolute.Result(delta=goal.request.theta)
+        finally:
+            self.rotating -= 1
+
+    def _tick(self, seconds: float = 0.01) -> Future[None]:
+        future: Future[None] = Future()
+
+        def done() -> None:
+            timer.cancel()
+            future.set_result(None)
+
+        timer = self.node.create_timer(seconds, done)
+        return future
 
     def shutdown(self) -> None:
+        # A goal still running when the executor stops would fail mid-step.
+        wait_until(lambda: self.rotating == 0)
         self.spinner.stop()
         self.rotate.destroy()
         for node in (self.add_two_ints, self.node, self.unresponsive_node):
@@ -132,5 +162,7 @@ def servers(api: TestClient) -> Iterator[Servers]:
     node = ros_state(api).node
     wait_until(lambda: all(client.service_is_ready() for client in node.clients))
     wait_until(lambda: node.count_subscribers("/print") > 0)
+    # Action clients are not among the node's clients.
+    wait_until(ros_state(api).rotate_controller.client.is_ready)
     yield servers
     servers.shutdown()

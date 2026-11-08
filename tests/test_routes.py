@@ -7,6 +7,7 @@ from typing import cast
 import pytest
 import rclpy
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 from example_interfaces.srv import AddTwoInts
 from std_msgs.msg import Int32
 from turtlesim_msgs.srv import TeleportAbsolute
@@ -194,6 +195,7 @@ def test_health(api: TestClient):
         "status": "ok",
         "node": {"name": "/fastapi_ros2", "spinning": True},
         "services": {"/add_two_ints": True, "/turtle1/teleport_absolute": True},
+        "actions": {"/turtle1/rotate_absolute": True},
     }
 
 
@@ -253,6 +255,7 @@ def test_health_after_rclpy_shutdown(api: TestClient):
         "/add_two_ints": False,
         "/turtle1/teleport_absolute": False,
     }
+    assert response.json()["actions"] == {"/turtle1/rotate_absolute": False}
 
 
 @pytest.mark.parametrize("path", ["/services/sum", "/services/move_turtle"])
@@ -399,3 +402,87 @@ def test_health_leaves_out_parameter_services(api: TestClient):
         "/add_two_ints",
         "/turtle1/teleport_absolute",
     }
+
+
+def follow(api: TestClient, goal_id: str) -> list[dict[str, object]]:
+    """Every message on a goal's WebSocket, until the server closes it."""
+    messages: list[dict[str, object]] = []
+    with api.websocket_connect(f"/actions/rotate_turtle/{goal_id}") as websocket:
+        while True:
+            try:
+                messages.append(cast(dict[str, object], websocket.receive_json()))
+            except WebSocketDisconnect:
+                return messages
+
+
+def test_rotate_turtle(api: TestClient, servers: Servers):
+    # Enough steps that the WebSocket connects before the goal finishes.
+    servers.rotate_steps = 20
+
+    response = api.post("/actions/rotate_turtle", json={"theta": 1.5})
+
+    assert response.status_code == 202
+    goal_id = cast(str, response.json()["goal_id"])
+    *feedback, outcome = follow(api, goal_id)
+    assert outcome == {"status": "succeeded", "result": {"delta": 1.5}}
+    remaining = [
+        cast(dict[str, dict[str, float]], f)["feedback"]["remaining"] for f in feedback
+    ]
+    assert remaining
+    assert remaining == sorted(remaining, reverse=True)
+    # A finished goal's WebSocket sends its outcome only.
+    assert follow(api, goal_id) == [outcome]
+
+
+def test_cancel_rotate_turtle(api: TestClient, servers: Servers):
+    servers.rotate_steps = 1000
+    goal_id = cast(
+        str,
+        api.post("/actions/rotate_turtle", json={"theta": 1.5}).json()["goal_id"],
+    )
+
+    response = api.post(f"/actions/rotate_turtle/{goal_id}/cancel")
+
+    assert response.status_code == 202
+    assert follow(api, goal_id)[-1]["status"] == "canceled"
+    response = api.post(f"/actions/rotate_turtle/{goal_id}/cancel")
+    assert response.status_code == 409
+    assert response.json() == {"detail": "The goal has already finished"}
+
+
+@pytest.mark.usefixtures("servers")
+def test_unknown_goal(api: TestClient):
+    response = api.post("/actions/rotate_turtle/nope/cancel")
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "detail": 'No goal "nope" for action "/turtle1/rotate_absolute"',
+    }
+    with api.websocket_connect("/actions/rotate_turtle/nope") as websocket:
+        with pytest.raises(WebSocketDisconnect) as closed:
+            _ = cast(object, websocket.receive_json())
+    assert closed.value.code == 4404
+
+
+def test_rotate_turtle_unavailable(api: TestClient):
+    response = api.post("/actions/rotate_turtle", json={"theta": 1.5})
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "detail": 'Action "/turtle1/rotate_absolute" is not available',
+    }
+
+
+@pytest.mark.parametrize(
+    "theta, error",
+    [(1e39, "float32_overflow"), (float("nan"), "finite_number")],
+)
+def test_rotate_turtle_rejects_invalid_input(api: TestClient, theta: float, error: str):
+    response = api.post(
+        "/actions/rotate_turtle",
+        content=json.dumps({"theta": theta}),
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["type"] == error
