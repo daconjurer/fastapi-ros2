@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from importlib.metadata import version
 from typing import cast
 
 import uvicorn
@@ -15,7 +16,9 @@ from fastapi_ros2.api.v1.routes.health import router as health_router
 from fastapi_ros2.nodes import ros_lifespan
 from fastapi_ros2.services.call import ServiceTimeoutError, ServiceUnavailableError
 
-app = FastAPI(lifespan=ros_lifespan)
+app = FastAPI(
+    title="FastAPI ROS2", version=version("fastapi_ros2"), lifespan=ros_lifespan
+)
 app.include_router(add_two_ints_router)
 app.include_router(turtle_router)
 app.include_router(print_router)
