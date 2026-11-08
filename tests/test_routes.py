@@ -35,7 +35,9 @@ def test_sum(api: TestClient):
     ],
 )
 def test_sum_rejects_invalid_input(
-    api: TestClient, body: dict[str, object], error: str
+    api: TestClient,
+    body: dict[str, object],
+    error: str,
 ):
     response = api.post("/services/sum", json=body)
 
@@ -61,7 +63,10 @@ def test_move_turtle(api: TestClient, servers: Servers):
     ],
 )
 def test_move_turtle_rejects_invalid_input(
-    api: TestClient, servers: Servers, x: float, error: str
+    api: TestClient,
+    servers: Servers,
+    x: float,
+    error: str,
 ):
     # NaN and infinity are not valid JSON, but clients send them anyway. httpx
     # refuses to encode them, so encode the body with Python's json module.
@@ -84,13 +89,17 @@ def test_service_unavailable(api: TestClient):
 
 
 def test_service_timeout(
-    api: TestClient, servers: Servers, monkeypatch: pytest.MonkeyPatch
+    api: TestClient,
+    servers: Servers,
+    monkeypatch: pytest.MonkeyPatch,
 ):
     client = api_client(api, TeleportAbsolute)
     servers.node.destroy_service(servers.teleport)
     wait_until(lambda: not client.service_is_ready())
     servers.unresponsive_node.create_service(
-        TeleportAbsolute, "/turtle1/teleport_absolute", lambda req, res: res
+        TeleportAbsolute,
+        "/turtle1/teleport_absolute",
+        lambda req, res: res,
     )
     wait_until(client.service_is_ready)
     # Shorten the default timeout, which the clients rely on.
@@ -100,7 +109,7 @@ def test_service_timeout(
 
     assert response.status_code == 504
     assert response.json() == {
-        "detail": 'Service "/turtle1/teleport_absolute" did not respond within 0.1s'
+        "detail": 'Service "/turtle1/teleport_absolute" did not respond within 0.1s',
     }
 
 
@@ -141,7 +150,8 @@ def test_health_with_a_service_down(api: TestClient, servers: Servers):
 
 @pytest.mark.usefixtures("servers")
 def test_a_failed_callback_stops_the_api(
-    api: TestClient, monkeypatch: pytest.MonkeyPatch
+    api: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
 ):
     signals: list[tuple[int, int]] = []
 
@@ -199,12 +209,12 @@ def test_graph(api: TestClient):
     body = graph()
 
     assert {"/fastapi_ros2", "/test_servers", "/add_two_ints_service"} <= set(
-        body.nodes
+        body.nodes,
     )
     assert body.topics["/print"] == ["std_msgs/msg/String"]
     assert body.services["/add_two_ints"] == ["example_interfaces/srv/AddTwoInts"]
     assert body.actions == {
-        "/turtle1/rotate_absolute": ["turtlesim_msgs/action/RotateAbsolute"]
+        "/turtle1/rotate_absolute": ["turtlesim_msgs/action/RotateAbsolute"],
     }
     # The topics and services the action is built on are hidden.
     assert [n for n in [*body.topics, *body.services] if "/_action/" in n] == []
@@ -252,7 +262,11 @@ def test_parameter_not_found(api: TestClient, path: str, detail: str):
     ],
 )
 def test_set_parameter(
-    api: TestClient, servers: Servers, name: str, value: object, stored: object
+    api: TestClient,
+    servers: Servers,
+    name: str,
+    value: object,
+    stored: object,
 ):
     path = f"/nodes/test_servers/parameters/{name}"
 
@@ -273,10 +287,14 @@ def test_set_parameter(
     ],
 )
 def test_set_parameter_refused(
-    api: TestClient, servers: Servers, value: object, reason: str
+    api: TestClient,
+    servers: Servers,
+    value: object,
+    reason: str,
 ):
     response = api.put(
-        "/nodes/test_servers/parameters/background_r", json={"value": value}
+        "/nodes/test_servers/parameters/background_r",
+        json={"value": value},
     )
 
     assert response.status_code == 422
@@ -287,14 +305,17 @@ def test_set_parameter_refused(
 @pytest.mark.usefixtures("servers")
 def test_set_parameter_rejects_invalid_input(api: TestClient):
     response = api.put(
-        "/nodes/test_servers/parameters/background_r", json={"value": {"r": 1}}
+        "/nodes/test_servers/parameters/background_r",
+        json={"value": {"r": 1}},
     )
 
     assert response.status_code == 422
 
 
 def test_parameter_timeout(
-    api: TestClient, servers: Servers, monkeypatch: pytest.MonkeyPatch
+    api: TestClient,
+    servers: Servers,
+    monkeypatch: pytest.MonkeyPatch,
 ):
     # The node is in the graph with its parameter services, but never answers.
     _ = servers

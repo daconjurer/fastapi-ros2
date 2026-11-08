@@ -30,7 +30,8 @@ class AddRequest(RosModel):
         # The add_two_ints server would wrap an overflowing sum around.
         if not INT64_MIN <= self.a + self.b <= INT64_MAX:
             raise PydanticCustomError(
-                "sum_overflow", "a + b should fit in a signed 64-bit integer"
+                "sum_overflow",
+                "a + b should fit in a signed 64-bit integer",
             )
         return self
 

@@ -13,12 +13,12 @@ class AddTwoIntsController:
 
     async def add_two_ints(self, a: int, b: int) -> AddTwoInts.Response:
         logger.info(
-            f'Sending request to service "{self.client.name}" with params {a} and {b}'
+            f'Sending request to service "{self.client.name}" with params {a} and {b}',
         )
         server_response = await self.client.send_request(a, b)
 
         logger.info(
             f'Response from service "{self.client.name}" '
-            f"to request with params {a} and {b}: {server_response.sum}"
+            f"to request with params {a} and {b}: {server_response.sum}",
         )
         return server_response

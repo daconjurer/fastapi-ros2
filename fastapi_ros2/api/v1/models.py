@@ -14,7 +14,8 @@ FLOAT32_MAX = 3.4028234663852886e38
 def _fits_int64(value: int) -> int:
     if not INT64_MIN <= value <= INT64_MAX:
         raise PydanticCustomError(
-            "int64_overflow", "Input should fit in a signed 64-bit integer"
+            "int64_overflow",
+            "Input should fit in a signed 64-bit integer",
         )
     return value
 
@@ -22,7 +23,8 @@ def _fits_int64(value: int) -> int:
 def _fits_float32(value: float) -> float:
     if abs(value) > FLOAT32_MAX:
         raise PydanticCustomError(
-            "float32_overflow", "Input should fit in a 32-bit float"
+            "float32_overflow",
+            "Input should fit in a 32-bit float",
         )
     return value
 
@@ -31,7 +33,9 @@ def _fits_float32(value: float) -> float:
 # The int64 range is documented as the OpenAPI int64 format rather than minimum
 # and maximum, which JSON Schema would round to the nearest float.
 Int64 = Annotated[
-    int, Field(json_schema_extra={"format": "int64"}), AfterValidator(_fits_int64)
+    int,
+    Field(json_schema_extra={"format": "int64"}),
+    AfterValidator(_fits_int64),
 ]
 
 # NaN, infinity, or values beyond float32 corrupt the receiving node's state.
@@ -92,7 +96,7 @@ def mirrors[M: type[BaseModel]](ros_type: type[BaseMessage]) -> Callable[[M], M]
             fields = ", ".join(f"{name}: {t}" for name, t in ros_fields.items())
             raise TypeError(
                 f"{model.__name__} should declare the fields of "
-                f"{ros_type.__name__} ({fields or 'none'})"
+                f"{ros_type.__name__} ({fields or 'none'})",
             )
         return model
 

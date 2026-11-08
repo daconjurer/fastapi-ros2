@@ -31,8 +31,8 @@ MoveBody = Annotated[
             "pose": {
                 "summary": "A pose inside the canvas",
                 "value": {"x": 3.0, "y": 4.0, "theta": 1.5},
-            }
-        }
+            },
+        },
     ),
 ]
 

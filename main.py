@@ -24,7 +24,9 @@ from fastapi_ros2.parameters.client import (
 from fastapi_ros2.services.call import ServiceTimeoutError, ServiceUnavailableError
 
 app = FastAPI(
-    title="FastAPI ROS2", version=version("fastapi_ros2"), lifespan=ros_lifespan
+    title="FastAPI ROS2",
+    version=version("fastapi_ros2"),
+    lifespan=ros_lifespan,
 )
 app.include_router(add_two_ints_router)
 app.include_router(turtle_router)
@@ -44,7 +46,8 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
         details = cast(Sequence[dict[str, object]], exc.errors())
         errors = [{k: v for k, v in e.items() if k != "input"} for e in details]
         return JSONResponse(
-            status_code=422, content={"detail": jsonable_encoder(errors)}
+            status_code=422,
+            content={"detail": jsonable_encoder(errors)},
         )
 
 

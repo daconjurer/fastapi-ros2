@@ -31,13 +31,13 @@ def main():
     minimal_client = AddTwoIntsClientAsync(node)
     minimal_client.client_.wait_for_service()
     future = minimal_client.client_.call_async(
-        AddTwoInts.Request(a=int(sys.argv[1]), b=int(sys.argv[2]))
+        AddTwoInts.Request(a=int(sys.argv[1]), b=int(sys.argv[2])),
     )
     rclpy.spin_until_future_complete(node, future)
     response = future.result()
     assert response is not None, "spin_until_future_complete waits for the result"
     logger.info(
-        f"Result of add_two_ints: for {int(sys.argv[1])} + {int(sys.argv[2])} = {response.sum}"
+        f"Result of add_two_ints: for {int(sys.argv[1])} + {int(sys.argv[2])} = {response.sum}",
     )
 
     node.destroy_node()

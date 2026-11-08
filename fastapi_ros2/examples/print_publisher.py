@@ -31,7 +31,7 @@ class PrintPublisher(Node):
             msg = String()
             msg.data = f"Hello World: {self.i}"
             self.get_logger().info(
-                f'Publishing "{msg.data}" to topic "{self.publisher_.topic_name}"'
+                f'Publishing "{msg.data}" to topic "{self.publisher_.topic_name}"',
             )
             self.publisher_.publish(msg)
             self.i += 1
