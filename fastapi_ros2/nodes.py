@@ -17,6 +17,7 @@ from fastapi_ros2.api.v1.controllers.add_two_ints import AddTwoIntsController
 from fastapi_ros2.api.v1.controllers.turtlesim import TurtleSimController
 from fastapi_ros2.api.v1.controllers.print import PrintController
 from fastapi_ros2.api.v1.controllers.parameters import ParameterController
+from fastapi_ros2.services.call import ServiceClient
 
 
 @final
@@ -79,11 +80,12 @@ class RosState:
 
     node: Node
     spin_thread: threading.Thread
-    # Shutting rclpy down destroys the node and its clients, after which their
-    # names can no longer be read, so /health reads them from here. These are the
-    # services the API depends on, not the parameter services it calls on demand.
+    # Shutting rclpy down destroys the node, after which its name can no longer be
+    # read, so /health reads it from here.
     node_name: str
-    service_names: list[str]
+    # The services the API depends on, not the parameter services it calls on
+    # demand.
+    services: list[ServiceClient]
     add_controller: AddTwoIntsController
     turtle_controller: TurtleSimController
     print_controller: PrintController
@@ -115,7 +117,7 @@ async def ros_lifespan(_app: FastAPI) -> AsyncGenerator[dict[str, RosState]]:
                 node=node,
                 spin_thread=spinner.thread,
                 node_name=node.get_fully_qualified_name(),
-                service_names=[client.service_name for client in node.clients],
+                services=[add_controller.client, turtle_controller.client],
                 add_controller=add_controller,
                 turtle_controller=turtle_controller,
                 print_controller=print_controller,

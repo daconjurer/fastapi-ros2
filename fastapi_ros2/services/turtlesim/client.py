@@ -7,7 +7,7 @@ import rclpy
 from rclpy.node import Node
 from turtlesim_msgs.srv import TeleportAbsolute
 
-from fastapi_ros2.services.call import call_service
+from fastapi_ros2.services.call import call_service, service_ready
 
 
 @final
@@ -16,10 +16,11 @@ class TurtlesimMoveClientAsync:
         self.client_ = node.create_client(
             TeleportAbsolute, "/turtle1/teleport_absolute"
         )
+        # Read once, since a destroyed client can no longer tell it.
+        self.name: str = self.client_.service_name
 
-    @property
-    def name(self):
-        return self.client_.service_name
+    def is_ready(self) -> bool:
+        return service_ready(self.client_)
 
     async def send_request(
         self, x: float, y: float, theta: float

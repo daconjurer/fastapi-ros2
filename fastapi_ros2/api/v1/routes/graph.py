@@ -1,8 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from rclpy.node import Node
-from rclpy.topic_or_service_is_hidden import topic_or_service_is_hidden
 
+from fastapi_ros2.graph import node_names, visible
 from fastapi_ros2.nodes import Ros
 
 
@@ -21,24 +20,6 @@ class GraphResponse(BaseModel):
     actions: dict[str, list[str]]
 
 
-def node_names(node: Node) -> list[str]:
-    """The fully qualified names of the nodes in the graph, sorted."""
-    return sorted(
-        f"{namespace.rstrip('/')}/{name}"
-        for name, namespace in node.get_node_names_and_namespaces()
-    )
-
-
-def _visible(names_and_types: list[tuple[str, list[str]]]) -> dict[str, list[str]]:
-    # Hidden names, such as the topics and services each action is built on, are
-    # left out, as ros2cli does by default.
-    return {
-        name: types
-        for name, types in names_and_types
-        if not topic_or_service_is_hidden(name)
-    }
-
-
 @router.get("/graph")
 async def graph(ros: Ros) -> GraphResponse:
     """List the nodes, topics, services, and actions in the ROS graph.
@@ -49,7 +30,7 @@ async def graph(ros: Ros) -> GraphResponse:
     node = ros.node
     return GraphResponse(
         nodes=node_names(node),
-        topics=_visible(node.get_topic_names_and_types()),
-        services=_visible(node.get_service_names_and_types()),
-        actions=_visible(node.get_action_names_and_types()),
+        topics=visible(node.get_topic_names_and_types()),
+        services=visible(node.get_service_names_and_types()),
+        actions=visible(node.get_action_names_and_types()),
     )

@@ -7,17 +7,18 @@ import rclpy
 from rclpy.node import Node
 from example_interfaces.srv import AddTwoInts
 
-from fastapi_ros2.services.call import call_service
+from fastapi_ros2.services.call import call_service, service_ready
 
 
 @final
 class AddTwoIntsClientAsync:
     def __init__(self, node: Node):
         self.client_ = node.create_client(AddTwoInts, "add_two_ints")
+        # Read once, since a destroyed client can no longer tell it.
+        self.name: str = self.client_.service_name
 
-    @property
-    def name(self):
-        return self.client_.service_name
+    def is_ready(self) -> bool:
+        return service_ready(self.client_)
 
     async def send_request(self, a: int, b: int) -> AddTwoInts.Response:
         return await call_service(self.client_, AddTwoInts.Request(a=a, b=b))

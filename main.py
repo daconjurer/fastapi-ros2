@@ -16,6 +16,11 @@ from fastapi_ros2.api.v1.routes.health import router as health_router
 from fastapi_ros2.api.v1.routes.graph import router as graph_router
 from fastapi_ros2.api.v1.routes.parameters import router as parameters_router
 from fastapi_ros2.nodes import ros_lifespan
+from fastapi_ros2.parameters.client import (
+    NodeNotFoundError,
+    ParameterNotFoundError,
+    ParameterRefusedError,
+)
 from fastapi_ros2.services.call import ServiceTimeoutError, ServiceUnavailableError
 
 app = FastAPI(
@@ -51,6 +56,17 @@ async def service_unavailable_handler(_request: Request, exc: ServiceUnavailable
 @app.exception_handler(ServiceTimeoutError)
 async def service_timeout_handler(_request: Request, exc: ServiceTimeoutError):
     return JSONResponse(status_code=504, content={"detail": str(exc)})
+
+
+@app.exception_handler(NodeNotFoundError)
+@app.exception_handler(ParameterNotFoundError)
+async def not_found_handler(_request: Request, exc: Exception):
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(ParameterRefusedError)
+async def parameter_refused_handler(_request: Request, exc: ParameterRefusedError):
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
 
 
 def main():

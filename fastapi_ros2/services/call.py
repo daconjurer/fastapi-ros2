@@ -1,10 +1,29 @@
 import asyncio
 import weakref
-from typing import Any, cast
+from typing import Any, Protocol, cast
 
 from rclpy.client import Client
 from rclpy.task import Future
 from rclpy.type_support import SrvRequestT, SrvResponseT
+
+
+class ServiceClient(Protocol):
+    """A client of a service the API depends on, as /health reports it."""
+
+    name: str
+
+    def is_ready(self) -> bool:
+        """Whether the service is available, and False once rclpy is shut down."""
+        ...
+
+
+def service_ready(client: Client[Any, Any]) -> bool:  # pyright: ignore[reportExplicitAny]
+    """Whether the client's service is available.
+
+    Shutting rclpy down destroys the client, after which only False is safe to
+    report, so the context is checked first.
+    """
+    return client.context.ok() and client.service_is_ready()
 
 
 class ServiceUnavailableError(Exception):

@@ -24,25 +24,15 @@ class HealthResponse(BaseModel):
 
 @router.get("/health", responses={503: {"model": HealthResponse}})
 async def health(ros: Ros, response: Response) -> HealthResponse:
-    node = ros.node
-    # Once rclpy is shut down, the node and its clients are destroyed.
-    context_ok = node.context.ok()
-    node_health = NodeHealth(
-        name=ros.node_name,
-        # Without the executor thread no ROS response or message ever arrives.
-        spinning=context_ok and ros.spin_thread.is_alive(),
-    )
-    services = dict.fromkeys(ros.service_names, False)
-    if context_ok:
-        services = {
-            c.service_name: c.service_is_ready()
-            for c in node.clients
-            if c.service_name in ros.service_names
-        }
-
-    ready = node_health.spinning and all(services.values())
-    if not ready:
-        response.status_code = 503
+    """Report whether the API can talk to ROS: `200` if so, `503` otherwise."""
+    # Without the executor thread no ROS response or message ever arrives, and
+    # once rclpy is shut down the node is destroyed.
+    spinning = ros.node.context.ok() and ros.spin_thread.is_alive()
+    services = {service.name: service.is_ready() for service in ros.services}
+    ready = spinning and all(services.values())
+    response.status_code = 200 if ready else 503
     return HealthResponse(
-        status="ok" if ready else "unavailable", node=node_health, services=services
+        status="ok" if ready else "unavailable",
+        node=NodeHealth(name=ros.node_name, spinning=spinning),
+        services=services,
     )
