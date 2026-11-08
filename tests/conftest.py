@@ -7,9 +7,12 @@ from typing import Any, cast, final
 import pytest
 import rclpy
 from fastapi.testclient import TestClient
+from rclpy.action import ActionServer
+from rclpy.action.server import ServerGoalHandle
 from rclpy.client import Client
 from rclpy.executors import SingleThreadedExecutor
 from std_msgs.msg import String
+from turtlesim_msgs.action import RotateAbsolute
 from turtlesim_msgs.srv import TeleportAbsolute
 
 from fastapi_ros2.nodes import RosState, Spinner
@@ -46,7 +49,8 @@ class Servers:
     """The ROS side the API talks to, run in the test process.
 
     `add_two_ints` is the project's real server, the teleport server records its
-    requests, and a subscription records what is published to `/print`.
+    requests, a subscription records what is published to `/print`, and the
+    rotate action server succeeds at once.
     """
 
     def __init__(self):
@@ -59,6 +63,9 @@ class Servers:
         self.prints: list[str] = []
         self.node.create_subscription(
             String, "/print", lambda msg: self.prints.append(msg.data), 10
+        )
+        self.rotate = ActionServer(
+            self.node, RotateAbsolute, "/turtle1/rotate_absolute", self._rotate
         )
         # Services on this node receive requests but never answer: it never spins.
         self.unresponsive_node = rclpy.create_node("test_unresponsive_servers")
@@ -74,8 +81,21 @@ class Servers:
         self.teleports.append(request)
         return response
 
+    def _rotate(
+        self,
+        goal: ServerGoalHandle[
+            RotateAbsolute.Goal,
+            RotateAbsolute.Result,
+            RotateAbsolute.Feedback,
+            RotateAbsolute.Impl,
+        ],
+    ) -> RotateAbsolute.Result:
+        goal.succeed()
+        return RotateAbsolute.Result()
+
     def shutdown(self) -> None:
         self.spinner.stop()
+        self.rotate.destroy()
         for node in (self.add_two_ints, self.node, self.unresponsive_node):
             node.destroy_node()
 

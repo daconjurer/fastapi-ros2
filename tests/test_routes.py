@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from example_interfaces.srv import AddTwoInts
 from turtlesim_msgs.srv import TeleportAbsolute
 
+from fastapi_ros2.api.v1.routes.graph import GraphResponse
 from fastapi_ros2.services.call import call_service
 from tests.conftest import Servers, api_client, ros_state, wait_until
 
@@ -184,3 +185,24 @@ def test_service_errors_are_documented(api: TestClient, path: str, status: str):
     openapi = api.get("/openapi.json")
 
     assert status in openapi.json()["paths"][path]["post"]["responses"]
+
+
+@pytest.mark.usefixtures("servers")
+def test_graph(api: TestClient):
+    def graph() -> GraphResponse:
+        return GraphResponse.model_validate(api.get("/graph").json())
+
+    # Discovery is asynchronous, so wait for the action server to show up.
+    wait_until(lambda: "/turtle1/rotate_absolute" in graph().actions)
+    body = graph()
+
+    assert {"/fastapi_ros2", "/test_servers", "/add_two_ints_service"} <= set(
+        body.nodes
+    )
+    assert body.topics["/print"] == ["std_msgs/msg/String"]
+    assert body.services["/add_two_ints"] == ["example_interfaces/srv/AddTwoInts"]
+    assert body.actions == {
+        "/turtle1/rotate_absolute": ["turtlesim_msgs/action/RotateAbsolute"]
+    }
+    # The topics and services the action is built on are hidden.
+    assert [n for n in [*body.topics, *body.services] if "/_action/" in n] == []

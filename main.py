@@ -13,6 +13,7 @@ from fastapi_ros2.api.v1.routes.add_two_ints import router as add_two_ints_route
 from fastapi_ros2.api.v1.routes.turtlesim import router as turtle_router
 from fastapi_ros2.api.v1.routes.print import router as print_router
 from fastapi_ros2.api.v1.routes.health import router as health_router
+from fastapi_ros2.api.v1.routes.graph import router as graph_router
 from fastapi_ros2.nodes import ros_lifespan
 from fastapi_ros2.services.call import ServiceTimeoutError, ServiceUnavailableError
 
@@ -23,6 +24,7 @@ app.include_router(add_two_ints_router)
 app.include_router(turtle_router)
 app.include_router(print_router)
 app.include_router(health_router)
+app.include_router(graph_router)
 
 
 @app.exception_handler(RequestValidationError)
