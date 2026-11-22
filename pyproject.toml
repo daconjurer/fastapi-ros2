@@ -8,7 +8,7 @@ dependencies = [
     "fastapi>=0.162.0,<0.163",
     "uvicorn[standard]>=0.54.0,<0.55",
     "pydantic[email]>=2.12,<3",
-    "loguru>=0.7.2,<0.8",
+    "loguru>=0.7.2,<0.9",
 ]
 
 [dependency-groups]
