@@ -2,7 +2,7 @@
 FROM ghcr.io/astral-sh/uv:0.11.21 AS uv
 FROM ghcr.io/casey/just:1.59.0 AS just
 
-FROM ros:lyrical-ros-base@sha256:3224ee150cb02eb89a5e0811bc267b57ed3a91b9c10191df57810726a7e916d7
+FROM ros:lyrical-ros-base@sha256:c69a7a39142b0a19c8cc5e80a35e9087e2ae46080dfa0a59961ff72287fdc5f6
 
 COPY --from=uv /uv /uvx /usr/local/bin/
 COPY --from=just /just /usr/local/bin/
